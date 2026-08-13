@@ -1,0 +1,49 @@
+{
+  "name": "StoryRating",
+  "type": "object",
+  "properties": {
+    "story_id": {
+      "type": "string",
+      "description": "Reference to the story being rated"
+    },
+    "reader_token": {
+      "type": "string",
+      "description": "Anonymous local token so one reader = one rating"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Rating from 1 to 5"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description (up to 1000 characters)",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "story_id",
+    "reader_token",
+    "rating"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
