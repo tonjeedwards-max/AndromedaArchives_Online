@@ -1,0 +1,61 @@
+{
+  "name": "Chapter",
+  "type": "object",
+  "properties": {
+    "story_id": {
+      "type": "string",
+      "description": "Story code referencing the parent story (e.g., GEA2)"
+    },
+    "title": {
+      "type": "string",
+      "description": "Chapter title"
+    },
+    "chapter_number": {
+      "type": "number",
+      "description": "Chapter order number"
+    },
+    "content": {
+      "type": "string",
+      "description": "Full chapter text content (markdown or plain text)"
+    },
+    "published": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether chapter is published"
+    },
+    "word_count": {
+      "type": "number",
+      "description": "Word count of the chapter"
+    },
+    "media": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Image URLs to display between text (light novel style)"
+    }
+  },
+  "required": [
+    "story_id",
+    "title",
+    "chapter_number"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
