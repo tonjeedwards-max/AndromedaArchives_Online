@@ -1,0 +1,56 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "guest_name": {
+      "type": "string",
+      "description": "Display name of the guest chatter"
+    },
+    "message": {
+      "type": "string",
+      "description": "Chat message content"
+    },
+    "guest_token": {
+      "type": "string",
+      "description": "Anonymous token to identify the guest"
+    },
+    "is_staff": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether the sender is a staff member (admin)"
+    },
+    "badge_tier": {
+      "type": "string",
+      "enum": [
+        "asteroid",
+        "comet",
+        "supernova"
+      ],
+      "description": "Streak badge tier of the sender at time of message"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description (up to 1000 characters)",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "guest_name",
+    "message",
+    "guest_token"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
