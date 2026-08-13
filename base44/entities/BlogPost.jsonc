@@ -1,0 +1,61 @@
+{
+  "name": "BlogPost",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Blog post title"
+    },
+    "content": {
+      "type": "string",
+      "description": "Full HTML/markdown content of the post"
+    },
+    "excerpt": {
+      "type": "string",
+      "description": "Short summary/preview text"
+    },
+    "cover_image": {
+      "type": "string",
+      "description": "Cover image URL"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags for categorization"
+    },
+    "published": {
+      "type": "boolean",
+      "default": true,
+      "description": "Whether post is published"
+    },
+    "publish_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the blog post was published"
+    }
+  },
+  "required": [
+    "title",
+    "content"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
