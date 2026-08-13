@@ -1,0 +1,48 @@
+{
+  "name": "Comment",
+  "type": "object",
+  "properties": {
+    "chapter_id": {
+      "type": "string",
+      "description": "Reference to the chapter being commented on (optional for story/blog-level comments)"
+    },
+    "story_id": {
+      "type": "string",
+      "description": "Reference to the story being commented on (for story-level comments)"
+    },
+    "blog_id": {
+      "type": "string",
+      "description": "Reference to the blog post being commented on (for blog-level comments)"
+    },
+    "parent_comment_id": {
+      "type": "string",
+      "description": "ID of the parent comment for threaded replies"
+    },
+    "author_name": {
+      "type": "string",
+      "description": "Display name of the commenter"
+    },
+    "content": {
+      "type": "string",
+      "description": "Comment text"
+    }
+  },
+  "required": [
+    "author_name",
+    "content"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
