@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { requireSupabase } from "@/api/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 import StoryCoverCard from "@/components/stories/StoryCoverCard";
 import StoryFilter from "@/components/stories/StoryFilter";
