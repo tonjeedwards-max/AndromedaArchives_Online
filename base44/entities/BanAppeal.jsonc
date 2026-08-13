@@ -1,0 +1,51 @@
+{
+  "name": "BanAppeal",
+  "type": "object",
+  "properties": {
+    "guest_token": {
+      "type": "string",
+      "description": "Token of the banned guest filing the appeal"
+    },
+    "guest_name": {
+      "type": "string",
+      "description": "Display name of the banned guest"
+    },
+    "appeal_message": {
+      "type": "string",
+      "description": "The appeal text submitted by the banned user"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Appeal review status"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description (up to 1000 characters)",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "guest_token",
+    "appeal_message"
+  ],
+  "rls": {
+    "create": null,
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
