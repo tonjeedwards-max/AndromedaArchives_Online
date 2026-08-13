@@ -1,0 +1,44 @@
+{
+  "name": "BannedGuest",
+  "type": "object",
+  "properties": {
+    "guest_token": {
+      "type": "string",
+      "description": "Token of the banned guest"
+    },
+    "guest_name": {
+      "type": "string",
+      "description": "Name of the banned guest"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for the ban"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description (up to 1000 characters)",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "guest_token"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
