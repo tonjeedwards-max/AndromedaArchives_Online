@@ -1,0 +1,76 @@
+{
+  "name": "Story",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Story title"
+    },
+    "story_code": {
+      "type": "string",
+      "description": "Short code identifier (e.g., GEA2, BAF)"
+    },
+    "synopsis": {
+      "type": "string",
+      "description": "Story synopsis/description"
+    },
+    "cover_image": {
+      "type": "string",
+      "description": "Book cover image URL"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Story tags for filtering and search"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "in_orbit",
+        "lost_in_space",
+        "in_production"
+      ],
+      "default": "in_orbit",
+      "description": "in_orbit = actively updating, lost_in_space = on hiatus, in_production = currently being written"
+    },
+    "hidden": {
+      "type": "boolean",
+      "default": false,
+      "description": "Hide story from public catalogue"
+    },
+    "sort_order": {
+      "type": "number",
+      "default": 0,
+      "description": "Display order in catalogue"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional description (up to 1000 characters)",
+      "maxLength": 1000
+    }
+  },
+  "required": [
+    "title",
+    "story_code"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": null,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
