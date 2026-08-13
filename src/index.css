@@ -1,0 +1,176 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode — default */
+    --background: 270 30% 97%;
+    --foreground: 270 40% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 270 40% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 270 40% 10%;
+    --primary: 263 50% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 330 60% 90%;
+    --secondary-foreground: 270 40% 15%;
+    --muted: 270 20% 93%;
+    --muted-foreground: 270 15% 45%;
+    --accent: 44 74% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 270 20% 86%;
+    --input: 270 20% 86%;
+    --ring: 263 50% 52%;
+    --chart-1: 263 50% 52%;
+    --chart-2: 330 60% 70%;
+    --chart-3: 44 74% 48%;
+    --chart-4: 270 40% 50%;
+    --chart-5: 300 40% 50%;
+    --radius: 0.75rem;
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-display: 'Cormorant Garamond', serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --sidebar-background: 270 25% 94%;
+    --sidebar-foreground: 270 40% 10%;
+    --sidebar-primary: 263 50% 52%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 20% 88%;
+    --sidebar-accent-foreground: 270 40% 10%;
+    --sidebar-border: 270 20% 86%;
+    --sidebar-ring: 263 50% 52%;
+  }
+
+  .dark {
+    --background: 270 60% 8%;
+    --foreground: 0 0% 100%;
+    --card: 270 55% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 270 55% 12%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 263 50% 67%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 330 85% 92%;
+    --secondary-foreground: 270 60% 18%;
+    --muted: 270 40% 16%;
+    --muted-foreground: 270 20% 70%;
+    --accent: 44 74% 63%;
+    --accent-foreground: 270 60% 8%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 270 30% 22%;
+    --input: 270 30% 22%;
+    --ring: 263 50% 67%;
+    --chart-1: 263 50% 67%;
+    --chart-2: 330 85% 92%;
+    --chart-3: 44 74% 63%;
+    --chart-4: 270 60% 40%;
+    --chart-5: 300 40% 50%;
+    --sidebar-background: 270 55% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 263 50% 67%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 40% 16%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 270 30% 22%;
+    --sidebar-ring: 263 50% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+  }
+}
+
+/* Sparkle star animation */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.animate-twinkle {
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.text-shimmer {
+  background: linear-gradient(90deg, #E6C15C 0%, #FCDDEC 25%, #E6C15C 50%, #9D7CD8 75%, #E6C15C 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s linear infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.4);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.7);
+}
+
+/* Reader-specific styles */
+.reader-content p {
+  margin-bottom: 1.5em;
+  line-height: 1.9;
+}
+
+.reader-content h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.5rem;
+  margin: 2em 0 1em;
+}
+
+/* Copyright protection — disable text selection, image dragging, and printing */
+body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+@media print {
+  body { display: none !important; }
+}
