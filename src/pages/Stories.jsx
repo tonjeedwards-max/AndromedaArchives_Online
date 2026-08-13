@@ -20,11 +20,23 @@ export default function Stories() {
     return () => window.removeEventListener("resize", updatePageSize);
   }, []);
 
-  const { data: stories, isLoading } = useQuery({
-    queryKey: ["stories"],
-    queryFn: () => base44.entities.Story.list(),
-    initialData: [],
-  });
+  const { data: stories = [], isLoading } = useQuery({
+  queryKey: ["stories"],
+  queryFn: async () => {
+    const { data, error } = await requireSupabase()
+      .from("stories")
+      .select("*")
+      .eq("hidden", false)
+      .order("sort_order", { ascending: true })
+      .order("title", { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return data ?? [];
+  },
+});
 
   const toggleFilter = (item) => {
     setSelectedFilters((prev) =>
