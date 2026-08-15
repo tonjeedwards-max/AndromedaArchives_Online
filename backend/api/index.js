@@ -1,7 +1,7 @@
-import { InMemoryStore } from './in-memory-store.js';
+import { SupabaseStore } from './supabase-store.js';
 import { StoryService } from './story-service.js';
 
-const store = new InMemoryStore();
+const store = new SupabaseStore();
 export const storyService = new StoryService(store);
 
 export function createStoryApi() {
@@ -15,6 +15,6 @@ export function createStoryApi() {
     deleteStory: (storyCode, actor) => storyService.deleteStory(storyCode, actor),
     createChapter: (data, actor) => storyService.createChapter(data, actor),
     updateChapter: (storyCode, chapterNumber, data, actor) => storyService.updateChapter(storyCode, chapterNumber, data, actor),
-    deleteChapter: (storyCode, chapterNumber, actor) => storyService.deleteChapter(storyCode, chapterNumber, actor)
+    deleteChapter: (storyCode, chapterNumber, actor) => storyService.deleteChapter(storyCode, chapterNumber, actor),
   };
 }
