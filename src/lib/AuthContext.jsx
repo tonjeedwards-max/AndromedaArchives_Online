@@ -1,55 +1,52 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
-import { requireSupabase } from "@/api/supabaseClient";
+import React, { createContext, useState, useContext, useCallback } from "react";
 
 const AuthContext = createContext();
 
+/**
+ * Public-first auth context.
+ *
+ * The archive UI must boot entirely from the GitHub/Netlify frontend.
+ * Supabase is a backend/data service and is intentionally NOT contacted
+ * during application startup. Admin/auth flows can explicitly call the
+ * auth helpers when they are needed.
+ */
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
-  const [authChecked, setAuthChecked] = useState(false);
   const [appPublicSettings, setAppPublicSettings] = useState(null);
 
   const syncUser = useCallback((nextUser) => {
     setUser(nextUser ?? null);
     setIsAuthenticated(Boolean(nextUser));
-    setAuthChecked(true);
-    setIsLoadingAuth(false);
   }, []);
 
   const checkUserAuth = useCallback(async () => {
     try {
-      setIsLoadingAuth(true);
-      setAuthError(null);
+      const { requireSupabase } = await import("@/api/supabaseClient");
       const { data, error } = await requireSupabase().auth.getUser();
       if (error && error.name !== "AuthSessionMissingError") throw error;
+      setAuthError(null);
       syncUser(data?.user ?? null);
+      return data?.user ?? null;
     } catch (error) {
       console.error("Supabase auth check failed:", error);
-      // Authentication is optional for the public archive. Do not block rendering.
       setAuthError(null);
       syncUser(null);
+      return null;
     }
   }, [syncUser]);
 
-  useEffect(() => {
-    // Deliberately use a one-time auth check instead of subscribing to
-    // Supabase auth state changes. The public archive must never depend on
-    // the auth event listener being available or healthy.
-    checkUserAuth();
-  }, [checkUserAuth]);
-
-  const checkAppState = checkUserAuth;
-
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
+      const { requireSupabase } = await import("@/api/supabaseClient");
       await requireSupabase().auth.signOut();
+    } catch (error) {
+      console.error("Supabase logout failed:", error);
     } finally {
       syncUser(null);
     }
-  };
+  }, [syncUser]);
 
   const navigateToLogin = () => null;
 
@@ -57,16 +54,18 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider value={{
       user,
       isAuthenticated,
-      isLoadingAuth,
-      isLoadingPublicSettings,
+      // Kept for compatibility with existing pages, but public startup is
+      // never blocked by authentication.
+      isLoadingAuth: false,
+      isLoadingPublicSettings: false,
       authError,
       appPublicSettings,
-      authChecked,
+      authChecked: false,
       isAdmin: user?.app_metadata?.role === "admin",
       logout,
       navigateToLogin,
       checkUserAuth,
-      checkAppState,
+      checkAppState: checkUserAuth,
     }}>
       {children}
     </AuthContext.Provider>
