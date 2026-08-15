@@ -1,16 +1,19 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
+import { sanitizeChapterHtml } from "@/lib/htmlContent";
 
 function isHTML(content) {
-  return /<p>|<div>|<h[1-6]>|<strong>|<em>|<ul>|<ol>|<img/i.test(content || "");
+  return /<\/?[a-z][^>]*>/i.test(content || "");
 }
 
 export default function MediaContent({ content, media, renderers }) {
   const mediaItems = media?.filter(Boolean) || [];
+  const safeContent = React.useMemo(() => isHTML(content) ? sanitizeChapterHtml(content) : content || "", [content]);
 
-  // Richtext (HTML) content from dashboard editor — render directly
+  // Uploaded chapter HTML is sanitized before rendering. This keeps literary
+  // formatting while preventing scripts, event handlers, and unsafe embeds.
   if (isHTML(content) && mediaItems.length === 0) {
-    return <div dangerouslySetInnerHTML={{ __html: content || "" }} />;
+    return <div dangerouslySetInnerHTML={{ __html: safeContent }} />;
   }
 
   if (mediaItems.length === 0) {
