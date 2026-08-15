@@ -28,41 +28,27 @@ export const AuthProvider = ({ children }) => {
       syncUser(data?.user ?? null);
     } catch (error) {
       console.error("Supabase auth check failed:", error);
-      setAuthError({ type: "unknown", message: error.message || "Authentication check failed" });
+      // Authentication is optional for the public archive. Do not block rendering.
+      setAuthError(null);
       syncUser(null);
     }
   }, [syncUser]);
 
   useEffect(() => {
-    const supabase = requireSupabase();
-    let subscription;
-
+    // Deliberately use a one-time auth check instead of subscribing to
+    // Supabase auth state changes. The public archive must never depend on
+    // the auth event listener being available or healthy.
     checkUserAuth();
-
-    try {
-      const result = supabase.auth.onAuthStateChange((_event, session) => {
-        syncUser(session?.user ?? null);
-      });
-      subscription = result?.data?.subscription ?? result?.subscription;
-    } catch (error) {
-      console.error("Supabase auth listener failed:", error);
-      // Authentication is optional for the public archive; never crash the app here.
-    }
-
-    return () => {
-      try {
-        subscription?.unsubscribe?.();
-      } catch (error) {
-        console.warn("Supabase auth listener cleanup failed:", error);
-      }
-    };
-  }, [checkUserAuth, syncUser]);
+  }, [checkUserAuth]);
 
   const checkAppState = checkUserAuth;
 
   const logout = async () => {
-    await requireSupabase().auth.signOut();
-    syncUser(null);
+    try {
+      await requireSupabase().auth.signOut();
+    } finally {
+      syncUser(null);
+    }
   };
 
   const navigateToLogin = () => null;
