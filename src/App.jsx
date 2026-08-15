@@ -18,11 +18,11 @@ import About from '@/pages/About';
 import Library from '@/pages/Library';
 import SearchPage from '@/pages/SearchPage';
 import AdminChapters from '@/pages/AdminChapters';
+import AdminContent from '@/pages/AdminContent';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
 
-  // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
@@ -31,18 +31,15 @@ const AuthenticatedApp = () => {
     );
   }
 
-  // Handle authentication errors
   if (authError) {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
       navigateToLogin();
       return null;
     }
   }
 
-  // Render the main app
   return (
     <Routes>
       <Route element={<AppLayout />}>
@@ -57,15 +54,14 @@ const AuthenticatedApp = () => {
         <Route path="/library" element={<Library />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/admin/chapters" element={<AdminChapters />} />
+        <Route path="/admin/content" element={<AdminContent />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
 };
 
-
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
