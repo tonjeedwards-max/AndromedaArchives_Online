@@ -1,0 +1,15 @@
+{
+  "name": "The Andromeda Archive",
+  "short_name": "Andromeda Archive",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0612",
+  "theme_color": "#0a0612",
+  "icons": [
+    {
+      "src": "/Logo%20Icon.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}
