@@ -35,11 +35,27 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const supabase = requireSupabase();
+    let subscription;
+
     checkUserAuth();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      syncUser(session?.user ?? null);
-    });
-    return () => listener.subscription.unsubscribe();
+
+    try {
+      const result = supabase.auth.onAuthStateChange((_event, session) => {
+        syncUser(session?.user ?? null);
+      });
+      subscription = result?.data?.subscription ?? result?.subscription;
+    } catch (error) {
+      console.error("Supabase auth listener failed:", error);
+      // Authentication is optional for the public archive; never crash the app here.
+    }
+
+    return () => {
+      try {
+        subscription?.unsubscribe?.();
+      } catch (error) {
+        console.warn("Supabase auth listener cleanup failed:", error);
+      }
+    };
   }, [checkUserAuth, syncUser]);
 
   const checkAppState = checkUserAuth;
@@ -49,11 +65,7 @@ export const AuthProvider = ({ children }) => {
     syncUser(null);
   };
 
-  const navigateToLogin = () => {
-    // Authentication is optional for the public archive. Admin authentication will
-    // use Supabase Auth without redirecting the public site to Base44.
-    return null;
-  };
+  const navigateToLogin = () => null;
 
   return (
     <AuthContext.Provider value={{
