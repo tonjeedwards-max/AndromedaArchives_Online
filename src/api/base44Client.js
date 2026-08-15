@@ -18,6 +18,12 @@ const idColumnFor = {
   Subscriber: "id",
 };
 
+const sortFieldMap = {
+  created_date: "created_at",
+  updated_date: "updated_at",
+  publish_date: "published_date",
+};
+
 function mapRow(entity, row) {
   if (!row) return row;
   if (entity === "BlogPost") {
@@ -25,7 +31,7 @@ function mapRow(entity, row) {
       ...row,
       id: String(row.blog_id),
       blog_id: String(row.blog_id),
-      publish_date: row.published_at,
+      publish_date: row.published_date || row.published_at,
       created_date: row.created_at,
       tags: Array.isArray(row.tags) ? row.tags : [],
     };
@@ -33,6 +39,8 @@ function mapRow(entity, row) {
   return {
     ...row,
     id: row.id == null ? row.id : String(row.id),
+    created_date: row.created_at,
+    updated_date: row.updated_at,
     tags: Array.isArray(row.tags) ? row.tags : row.tags,
     media: Array.isArray(row.media) ? row.media : row.media,
   };
@@ -68,7 +76,8 @@ async function listEntity(entity, filter = {}, sort, limit) {
 
   if (sort) {
     const descending = String(sort).startsWith("-");
-    const field = String(sort).replace(/^-/, "");
+    const requestedField = String(sort).replace(/^-/, "");
+    const field = sortFieldMap[requestedField] || requestedField;
     query = query.order(field, { ascending: !descending });
   }
   if (limit) query = query.limit(limit);
@@ -118,25 +127,18 @@ function entityApi(entity) {
 
 export const base44 = {
   entities: Object.fromEntries(Object.keys(tableFor).map((name) => [name, entityApi(name)])),
-  analytics: {
-    track() {
-      return Promise.resolve();
-    },
-  },
+  analytics: { track: () => Promise.resolve() },
   auth: {
     async me() {
-      const supabase = requireSupabase();
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user } } = await requireSupabase().auth.getUser();
       return user;
     },
     async logout() {
-      const supabase = requireSupabase();
-      await supabase.auth.signOut();
+      await requireSupabase().auth.signOut();
       return true;
     },
     redirectToLogin(returnUrl = window.location.href) {
-      const url = `/login?redirect=${encodeURIComponent(returnUrl)}`;
-      window.location.assign(url);
+      window.location.assign(`/login?redirect=${encodeURIComponent(returnUrl)}`);
     },
   },
 };
