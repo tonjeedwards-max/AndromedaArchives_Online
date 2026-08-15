@@ -14,6 +14,13 @@ export class SupabaseStore {
     this.client = client;
   }
 
+  async resolveStoryId(storyCodeOrId) {
+    if (typeof storyCodeOrId === "number" || /^\d+$/.test(String(storyCodeOrId))) return Number(storyCodeOrId);
+    const { data, error } = await this.client.from("stories").select("id").eq("story_code", storyCodeOrId).maybeSingle();
+    if (error) throw error;
+    return data?.id ?? null;
+  }
+
   async listStories() {
     const { data, error } = await this.client.from("stories").select("*");
     if (error) throw error;
@@ -44,25 +51,34 @@ export class SupabaseStore {
     return true;
   }
 
-  async listChapters(storyId) {
+  async listChapters(storyCodeOrId) {
+    const storyId = await this.resolveStoryId(storyCodeOrId);
+    if (!storyId) return [];
     const { data, error } = await this.client.from("chapters").select("*").eq("story_id", storyId).order("chapter_number", { ascending: true });
     if (error) throw error;
     return data ?? [];
   }
 
   async createChapter(chapter) {
-    const { data, error } = await this.client.from("chapters").insert(chapter).select().single();
+    const input = { ...chapter };
+    if (typeof input.story_id === "string") input.story_id = await this.resolveStoryId(input.story_id);
+    if (!input.story_id) throw new Error("A valid story_id/story_code is required");
+    const { data, error } = await this.client.from("chapters").insert(input).select().single();
     if (error) throw error;
     return data;
   }
 
-  async updateChapter(storyId, chapterNumber, data) {
+  async updateChapter(storyCodeOrId, chapterNumber, data) {
+    const storyId = await this.resolveStoryId(storyCodeOrId);
+    if (!storyId) return null;
     const { data: row, error } = await this.client.from("chapters").update(data).eq("story_id", storyId).eq("chapter_number", chapterNumber).select().maybeSingle();
     if (error) throw error;
     return row;
   }
 
-  async deleteChapter(storyId, chapterNumber) {
+  async deleteChapter(storyCodeOrId, chapterNumber) {
+    const storyId = await this.resolveStoryId(storyCodeOrId);
+    if (!storyId) return false;
     const { error } = await this.client.from("chapters").delete().eq("story_id", storyId).eq("chapter_number", chapterNumber);
     if (error) throw error;
     return true;
