@@ -5,7 +5,6 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import BottomNav from "./BottomNav";
 import StarField from "../shared/StarField";
-import ChatWidget from "@/components/blog/ChatWidget";
 import CopyProtect from "@/components/shared/CopyProtect";
 
 export default function AppLayout() {
@@ -20,7 +19,6 @@ export default function AppLayout() {
       <CopyProtect />
       <BottomNav />
       <FloatingActions />
-      <ChatWidget />
     </div>
   );
 }
