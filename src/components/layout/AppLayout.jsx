@@ -1,6 +1,7 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import FloatingActions from "@/components/shared/FloatingActions";
+import ChatWidget from "@/components/shared/ChatWidget";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import BottomNav from "./BottomNav";
@@ -18,6 +19,7 @@ export default function AppLayout() {
       <Footer />
       <CopyProtect />
       <BottomNav />
+      <ChatWidget />
       <FloatingActions />
     </div>
   );
