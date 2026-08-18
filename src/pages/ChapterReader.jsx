@@ -33,12 +33,20 @@ export default function ChapterReader() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [fetchedContent, setFetchedContent] = useState(null);
 
+  const chapterNumber = Number(chapterId);
+
   const { data: chapter, isLoading: loadingChapter } = useQuery({
-    queryKey: ["chapter", chapterId],
+    queryKey: ["chapter", storyCode, chapterNumber],
     queryFn: async () => {
-      const chapters = await base44.entities.Chapter.filter({ id: chapterId });
+      if (!storyCode || !Number.isInteger(chapterNumber)) return null;
+      const chapters = await base44.entities.Chapter.filter({
+        story_id: storyCode,
+        chapter_number: chapterNumber,
+        published: true,
+      });
       return chapters[0] || null;
     },
+    enabled: Boolean(storyCode) && Number.isInteger(chapterNumber),
   });
 
   const { data: allChapters } = useQuery({
@@ -59,14 +67,14 @@ export default function ChapterReader() {
   useEffect(() => {
     if (chapter && story) {
       addToHistory({
-        chapterId: chapter.id,
+        chapterId: chapter.chapter_number,
         storyId: storyCode,
         title: chapter.title,
         chapterNumber: chapter.chapter_number,
         storyTitle: story.title,
       });
     }
-  }, [chapter?.id, story?.id]);
+  }, [chapter?.chapter_number, story?.id, storyCode, addToHistory]);
 
   // Fetch content if it's a file URL (large chapters are stored as files)
   useEffect(() => {
@@ -149,7 +157,9 @@ export default function ChapterReader() {
     );
   }
 
-  const currentIndex = allChapters.findIndex((c) => c.id === chapterId);
+  const currentIndex = allChapters.findIndex(
+    (c) => Number(c.chapter_number) === chapterNumber
+  );
   const prevChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null;
   const nextChapter = currentIndex < allChapters.length - 1 ? allChapters[currentIndex + 1] : null;
 
@@ -197,7 +207,7 @@ export default function ChapterReader() {
     }
     setDirection(dir);
     setMangaPage(0);
-    navigate(`/story/${storyCode}/chapter/${ch.id}`);
+    navigate(`/story/${storyCode}/chapter/${ch.chapter_number}`);
   };
 
   // Reader bg/text classes based on night mode
