@@ -1,0 +1,16 @@
+{
+  "name": "The Andromeda Archive",
+  "short_name": "Andromeda Archives",
+  "description": "A cosmic archive of sci-fi, romance, fantasy, and stories with a little dark humor on the side.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050816",
+  "theme_color": "#050816",
+  "icons": [
+    {
+      "src": "/Logo%20Icon.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ]
+}
