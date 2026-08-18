@@ -46,15 +46,23 @@ function mapRow(entity, row) {
   };
 }
 
+// Chapters store story_id as the public story code (e.g. "FB1"), not the
+// internal numeric stories.id. Keep that relationship intact. Other legacy
+// entities that use the numeric story FK can still resolve story codes here.
 async function resolveReference(entity, field, value) {
   if (value == null) return value;
   if (!["story_id", "chapter_id", "blog_id"].includes(field)) return value;
 
-  if (field === "story_id" && entity !== "Story") {
+  if (field === "story_id" && entity !== "Story" && entity !== "Chapter") {
     const supabase = requireSupabase();
-    const { data } = await supabase.from("stories").select("id").eq("story_code", value).maybeSingle();
+    const { data } = await supabase
+      .from("stories")
+      .select("id")
+      .eq("story_code", value)
+      .maybeSingle();
     return data?.id ?? value;
   }
+
   return value;
 }
 
