@@ -42,19 +42,19 @@ export default function StoryHub() {
   });
 
   const { data: chapters = [], isLoading: loadingChapters } = useQuery({
-    queryKey: ["chapters", storyCode],
+    queryKey: ["chapters", storyCode, story?.id],
     queryFn: async () => {
-      if (!storyCode) return [];
+      if (!story?.id) return [];
       const { data, error } = await requireSupabase()
         .from("chapters")
         .select("*")
-        .eq("story_id", storyCode)
+        .eq("story_id", story.id)
         .eq("published", true)
         .order("chapter_number", { ascending: true });
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
-    enabled: Boolean(storyCode),
+    enabled: Boolean(story?.id),
     initialData: [],
   });
 
@@ -109,21 +109,12 @@ export default function StoryHub() {
               ))}
             </div>
 
-            <h1 className="font-heading text-3xl md:text-4xl font-semibold tracking-tight mb-4">
-              {story.title}
-            </h1>
+            <h1 className="font-heading text-3xl md:text-4xl font-semibold tracking-tight mb-4">{story.title}</h1>
 
-            {story.synopsis && (
-              <p className="text-foreground/70 leading-relaxed font-light max-w-2xl">
-                {story.synopsis}
-              </p>
-            )}
+            {story.synopsis && <p className="text-foreground/70 leading-relaxed font-light max-w-2xl">{story.synopsis}</p>}
 
             <div className="flex items-center gap-4 mt-5 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <BookOpen className="w-4 h-4" />
-                {chapters.length} chapter{chapters.length !== 1 ? "s" : ""}
-              </span>
+              <span className="flex items-center gap-1"><BookOpen className="w-4 h-4" />{chapters.length} chapter{chapters.length !== 1 ? "s" : ""}</span>
             </div>
 
             <StoryRating storyId={storyCode} />
@@ -134,29 +125,19 @@ export default function StoryHub() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <Tabs defaultValue="chapters" className="w-full">
           <TabsList className="bg-card/60 border border-border/40 mb-6">
-            <TabsTrigger value="chapters" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              <BookOpen className="w-3.5 h-3.5" />
-              Chapters
-            </TabsTrigger>
-            <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary">
-              <MessageCircle className="w-3.5 h-3.5" />
-              Comments
-            </TabsTrigger>
+            <TabsTrigger value="chapters" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><BookOpen className="w-3.5 h-3.5" />Chapters</TabsTrigger>
+            <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><MessageCircle className="w-3.5 h-3.5" />Comments</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chapters">
             {loadingChapters ? (
-              <div className="flex justify-center py-10">
-                <Loader2 className="w-5 h-5 animate-spin text-primary" />
-              </div>
+              <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
             ) : (
               <ChapterList chapters={chapters} storyId={storyCode} />
             )}
           </TabsContent>
 
-          <TabsContent value="comments">
-            <StoryCommentBox storyId={storyCode} />
-          </TabsContent>
+          <TabsContent value="comments"><StoryCommentBox storyId={storyCode} /></TabsContent>
         </Tabs>
       </div>
     </div>
