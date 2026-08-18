@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import HomeSidebar from "@/components/home/HomeSidebar";
 import FeedPost from "@/components/blog/FeedPost";
+import { requireSupabase } from "@/api/supabaseClient";
 
 const POSTS_PER_PAGE = 5;
 
@@ -12,7 +12,28 @@ export default function Blog() {
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ["blog-posts-all"],
-    queryFn: () => base44.entities.BlogPost.filter({ published: true }, "-created_date", 200),
+    queryFn: async () => {
+      const supabase = requireSupabase();
+      const { data, error } = await supabase
+        .from("blogs")
+        .select("blog_id,title,excerpt,content,tags,published,published_date,published_at,created_at,updated_at")
+        .eq("published", true)
+        .order("published_date", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (error) throw error;
+
+      return (data || []).map((post) => ({
+        ...post,
+        id: String(post.blog_id),
+        blog_id: String(post.blog_id),
+        publish_date: post.published_date || post.published_at,
+        created_date: post.created_at,
+        updated_date: post.updated_at,
+        tags: Array.isArray(post.tags) ? post.tags : [],
+      }));
+    },
     initialData: [],
   });
 
@@ -34,7 +55,6 @@ export default function Blog() {
         <HomeSidebar />
 
         <main className="flex-1 min-w-0">
-          {/* Mobile header */}
           <div className="lg:hidden text-center mb-8">
             <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border-2 border-accent/40 flex items-center justify-center mb-3">
               <Sparkles className="w-7 h-7 text-accent" />
@@ -42,7 +62,6 @@ export default function Blog() {
             <p className="text-sm text-muted-foreground font-light">welcome to the archives, buddy.</p>
           </div>
 
-          {/* Section heading */}
           <div className="mb-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="h-px w-8 bg-gradient-to-r from-transparent to-accent/60" />
@@ -55,7 +74,6 @@ export default function Blog() {
             </p>
           </div>
 
-          {/* Feed */}
           {isLoading ? (
             <div className="flex justify-center py-16">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
