@@ -4,6 +4,8 @@ import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import { ArrowLeft, Calendar, Loader2, Sparkles, Tag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -42,7 +44,6 @@ export default function BlogPostDetail() {
 
   return (
     <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-16">
-      {/* Back button */}
       <Link
         to="/blog"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-accent transition-colors mb-8 group"
@@ -57,7 +58,6 @@ export default function BlogPostDetail() {
         transition={{ duration: 0.4 }}
         className="bg-card/70 backdrop-blur-sm border border-border/50 rounded-xl overflow-hidden shadow-sm"
       >
-        {/* Blog header */}
         <div className="px-6 sm:px-8 pt-6 pb-2">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-4 h-4 text-accent" />
@@ -80,15 +80,29 @@ export default function BlogPostDetail() {
           </div>
         )}
 
-        {/* Blog content */}
         <div className="px-6 sm:px-8 py-6 reader-content">
           <ReactMarkdown
+            rehypePlugins={[rehypeRaw, rehypeSanitize]}
             components={{
               p: ({ children }) => <p className="mb-5 leading-[1.9] text-foreground/85">{children}</p>,
+              h1: ({ children }) => <h2 className="font-heading text-2xl font-semibold mt-8 mb-4">{children}</h2>,
               h2: ({ children }) => <h2 className="font-heading text-xl font-semibold mt-8 mb-4">{children}</h2>,
               h3: ({ children }) => <h3 className="font-heading text-lg font-semibold mt-6 mb-3">{children}</h3>,
               em: ({ children }) => <em className="italic opacity-70">{children}</em>,
               strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+              a: ({ href, children }) => (
+                <a
+                  href={href}
+                  target={href?.startsWith("http") ? "_blank" : undefined}
+                  rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+                  className="text-primary underline underline-offset-2 hover:text-accent transition-colors"
+                >
+                  {children}
+                </a>
+              ),
+              ul: ({ children }) => <ul className="list-disc pl-6 mb-5 space-y-2">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal pl-6 mb-5 space-y-2">{children}</ol>,
+              li: ({ children }) => <li className="leading-[1.8] text-foreground/85">{children}</li>,
               blockquote: ({ children }) => (
                 <blockquote className="border-l-2 border-primary/40 pl-5 my-6 italic opacity-70">{children}</blockquote>
               ),
@@ -105,7 +119,6 @@ export default function BlogPostDetail() {
           </ReactMarkdown>
         </div>
 
-        {/* Tags */}
         {post.tags && post.tags.length > 0 && (
           <div className="px-6 sm:px-8 py-5 border-t border-border/30">
             <div className="flex items-center gap-2 mb-3">
@@ -122,12 +135,10 @@ export default function BlogPostDetail() {
           </div>
         )}
 
-        {/* Share */}
         <div className="px-6 sm:px-8">
           <BlogShare title={post.title} excerpt={post.excerpt} />
         </div>
 
-        {/* Comments */}
         <div className="px-6 sm:px-8 pb-8">
           <BlogCommentBox blogId={blogId} />
         </div>
