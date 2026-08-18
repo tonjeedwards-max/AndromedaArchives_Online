@@ -24,8 +24,23 @@ const sortFieldMap = {
   publish_date: "published_date",
 };
 
+function asArray(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 function mapRow(entity, row) {
   if (!row) return row;
+
   if (entity === "BlogPost") {
     return {
       ...row,
@@ -33,27 +48,29 @@ function mapRow(entity, row) {
       blog_id: String(row.blog_id),
       publish_date: row.published_date || row.published_at,
       created_date: row.created_at,
-      tags: Array.isArray(row.tags) ? row.tags : [],
+      updated_date: row.updated_at,
+      tags: asArray(row.tags),
     };
   }
+
   return {
     ...row,
     id: row.id == null ? row.id : String(row.id),
     created_date: row.created_at,
     updated_date: row.updated_at,
-    tags: Array.isArray(row.tags) ? row.tags : row.tags,
-    media: Array.isArray(row.media) ? row.media : row.media,
+    tags: asArray(row.tags),
+    media: asArray(row.media),
   };
 }
 
-// Chapters store story_id as the public story code (e.g. "FB1"), not the
-// internal numeric stories.id. Keep that relationship intact. Other legacy
-// entities that use the numeric story FK can still resolve story codes here.
 async function resolveReference(entity, field, value) {
   if (value == null) return value;
   if (!["story_id", "chapter_id", "blog_id"].includes(field)) return value;
 
-  if (field === "story_id" && entity !== "Story" && entity !== "Chapter") {
+  // Chapters use story_code directly in the current schema.
+  if (field === "story_id" && entity === "Chapter") return value;
+
+  if (field === "story_id" && entity !== "Story") {
     const supabase = requireSupabase();
     const { data } = await supabase
       .from("stories")
@@ -66,8 +83,8 @@ async function resolveReference(entity, field, value) {
   return value;
 }
 
-function normalizeFilter(entity, filter = {}) {
-  return { ...filter };
+function normalizeFilter(_entity, filter = {}) {
+  return filter && typeof filter === "object" && !Array.isArray(filter) ? filter : {};
 }
 
 async function listEntity(entity, filter = {}, sort, limit) {
@@ -92,7 +109,7 @@ async function listEntity(entity, filter = {}, sort, limit) {
 
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map((row) => mapRow(entity, row));
+  return Array.isArray(data) ? data.map((row) => mapRow(entity, row)) : [];
 }
 
 function entityApi(entity) {
@@ -111,8 +128,12 @@ function entityApi(entity) {
     async create(payload) {
       const supabase = requireSupabase();
       const input = { ...payload };
-      if (entity === "Chapter" && typeof input.story_id === "string") input.story_id = await resolveReference(entity, "story_id", input.story_id);
-      if (["Comment", "StoryRating"].includes(entity) && typeof input.story_id === "string") input.story_id = await resolveReference(entity, "story_id", input.story_id);
+      if (entity === "Chapter" && typeof input.story_id === "string") {
+        input.story_id = await resolveReference(entity, "story_id", input.story_id);
+      }
+      if (["Comment", "StoryRating"].includes(entity) && typeof input.story_id === "string") {
+        input.story_id = await resolveReference(entity, "story_id", input.story_id);
+      }
       if (entity === "Comment" && typeof input.blog_id === "string") input.blog_id = Number(input.blog_id);
       const { data, error } = await supabase.from(table).insert(input).select().single();
       if (error) throw error;
