@@ -4,7 +4,7 @@ import { supabase } from "@/api/supabaseClient";
 import ChatRulesGate from "@/components/blog/ChatRulesGate";
 import { claimReaderUsername, getReaderToken, getSavedUsername } from "@/lib/readerIdentity";
 
-const RULES_KEY_PREFIX = "andromeda-chat-rules-accepted-";
+const RULES_KEY_PREFIX = "andromeda-chat-rules-v2-";
 const ROOM_ID = 1;
 
 export default function ChatWidget() {
@@ -16,12 +16,20 @@ export default function ChatWidget() {
   const endRef = useRef(null), token = useMemo(getReaderToken, []), rulesKey = `${RULES_KEY_PREFIX}${token}`;
 
   useEffect(() => setRulesAccepted(localStorage.getItem(rulesKey) === "true"), [rulesKey]);
+
   useEffect(() => {
     if (!supabase) return;
     let cancelled = false;
     (async () => {
       const { data: existing } = await supabase.from("chat_users").select("id, display_name, is_banned").eq("user_token", token).maybeSingle();
-      if (existing) { if (!cancelled) { setUserId(existing.id); setIsBanned(Boolean(existing.is_banned)); if (existing.display_name && !name) setName(existing.display_name); } return; }
+      if (existing) {
+        if (!cancelled) {
+          setUserId(existing.id);
+          setIsBanned(Boolean(existing.is_banned));
+          if (existing.display_name && !name) setName(existing.display_name);
+        }
+        return;
+      }
       const saved = getSavedUsername();
       const { data: created, error: createError } = await supabase.from("chat_users").insert({ user_token: token, display_name: saved || "Starling", is_banned: false }).select("id, is_banned").single();
       if (!cancelled) createError ? setError("Chat is temporarily unavailable.") : (setUserId(created.id), setIsBanned(Boolean(created.is_banned)));
@@ -34,27 +42,43 @@ export default function ChatWidget() {
     const { data } = await supabase.from("chat_messages").select("id, user_id, display_name, content, created_at").eq("room_id", ROOM_ID).eq("is_deleted", false).order("created_at", { ascending: true }).limit(100);
     if (Array.isArray(data)) setMessages(data);
   };
-  useEffect(() => { if (!open || !supabase) return; loadMessages(); const interval = window.setInterval(loadMessages, 5000); const channel = supabase.channel("andromeda-general-chat").on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `room_id=eq.${ROOM_ID}` }, loadMessages).subscribe(); return () => { window.clearInterval(interval); supabase.removeChannel(channel); }; }, [open]);
+
+  useEffect(() => {
+    if (!open || !supabase) return;
+    loadMessages();
+    const interval = window.setInterval(loadMessages, 5000);
+    const channel = supabase.channel("andromeda-general-chat").on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_messages", filter: `room_id=eq.${ROOM_ID}` }, loadMessages).subscribe();
+    return () => { window.clearInterval(interval); supabase.removeChannel(channel); };
+  }, [open]);
+
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, open]);
 
   const acceptRules = () => { localStorage.setItem(rulesKey, "true"); setRulesAccepted(true); };
+
   const saveName = async () => {
     if (!name.trim()) return;
     setIdentityLoading(true); setError("");
-    try { const identity = await claimReaderUsername(name); setName(identity.username); if (supabase && userId) await supabase.from("chat_users").update({ display_name: identity.username }).eq("id", userId); }
-    catch (e) { setError(e.message === "username_taken" ? "That username is already taken. Please choose another." : e.message || "Couldn't save that username."); }
-    finally { setIdentityLoading(false); }
+    try {
+      const identity = await claimReaderUsername(name);
+      setName(identity.username);
+      if (supabase && userId) await supabase.from("chat_users").update({ display_name: identity.username }).eq("id", userId);
+    } catch (e) {
+      setError(e.message === "username_taken" ? "That username is already taken. Please choose another." : e.message || "Couldn't save that username.");
+    } finally { setIdentityLoading(false); }
   };
+
   const sendMessage = async (event) => {
-    event.preventDefault(); const content = draft.trim();
+    event.preventDefault();
+    const content = draft.trim();
     if (!content || !userId || !supabase || loading || isBanned || !rulesAccepted || !name.trim()) return;
     setLoading(true); setError("");
     const { error: sendError } = await supabase.from("chat_messages").insert({ room_id: ROOM_ID, user_id: userId, display_name: name.trim(), content, is_deleted: false });
-    if (sendError) setError(sendError.message.includes("chat_can_send") ? "You are sending messages too quickly. Try again in a moment." : "Couldn't send that message."); else { setDraft(""); await loadMessages(); }
+    if (sendError) setError(sendError.message.includes("chat_can_send") ? "You are sending messages too quickly. Try again in a moment." : "Couldn't send that message.");
+    else { setDraft(""); await loadMessages(); }
     setLoading(false);
   };
 
-  return <div className="fixed bottom-20 left-4 lg:bottom-6 lg:left-6 z-50">
+  return <div className="fixed bottom-20 left-4 lg:bottom-6 lg:left-6 z-[100]">
     {open && <div className="mb-3 w-[min(90vw,380px)] max-h-[70vh] flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-2xl backdrop-blur-xl">
       <div className="flex items-center justify-between border-b border-border/40 px-4 py-3"><div><p className="font-heading font-semibold">Starlings' Chat</p><p className="text-[11px] text-muted-foreground">General discussion & feedback</p></div><button onClick={() => setOpen(false)} className="rounded-md p-1.5 text-muted-foreground hover:text-foreground" aria-label="Close chat"><X className="h-4 w-4" /></button></div>
       <div className="flex-1 overflow-y-auto space-y-3 p-4 min-h-[160px]">{messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">No messages yet. Be the first Starling to say hi!</p>}{messages.map((message) => <div key={message.id} className="rounded-xl bg-muted/50 px-3 py-2"><div className="flex items-baseline justify-between gap-2"><span className="text-xs font-semibold text-accent">{message.display_name || "Starling"}</span><span className="text-[10px] text-muted-foreground">{new Date(message.created_at).toLocaleString()}</span></div><p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground/90">{message.content}</p></div>)}<div ref={endRef} /></div>
