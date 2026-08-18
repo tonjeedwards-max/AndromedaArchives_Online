@@ -25,7 +25,7 @@ export default function ChapterList({ chapters, storyId }) {
           transition={{ delay: i * 0.05 }}
         >
           <Link
-            to={`/story/${storyId}/chapter/${ch.id}`}
+            to={`/story/${storyId}/chapter/${ch.chapter_number}`}
             className="flex items-center justify-between gap-4 px-5 py-4 rounded-lg bg-card/40 border border-border/30 hover:border-primary/40 hover:bg-card/80 transition-all duration-300 group"
           >
             <div className="flex items-center gap-3 min-w-0">
