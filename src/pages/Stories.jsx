@@ -6,6 +6,19 @@ import StoryFilter from "@/components/stories/StoryFilter";
 import SectionHeading from "@/components/shared/SectionHeading";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 
+const asArray = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export default function Stories() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -20,8 +33,8 @@ export default function Stories() {
     return () => window.removeEventListener("resize", updatePageSize);
   }, []);
 
-  const { data: stories = [], isLoading } = useQuery({
-    queryKey: ["stories"],
+  const { data: storiesData, isLoading } = useQuery({
+    queryKey: ["story-catalogue"],
     queryFn: async () => {
       const { data, error } = await requireSupabase()
         .from("stories")
@@ -30,9 +43,14 @@ export default function Stories() {
         .order("sort_order", { ascending: true })
         .order("title", { ascending: true });
       if (error) throw error;
-      return data ?? [];
+      return (Array.isArray(data) ? data : []).map((story) => ({
+        ...story,
+        tags: asArray(story.tags),
+      }));
     },
   });
+
+  const stories = Array.isArray(storiesData) ? storiesData : [];
 
   const toggleFilter = (item) => {
     setSelectedFilters((prev) => prev.includes(item) ? prev.filter((f) => f !== item) : [...prev, item]);
@@ -47,13 +65,14 @@ export default function Stories() {
   const filtered = useMemo(() => stories
     .filter((story) => !story.hidden)
     .filter((story) => {
+      const tags = asArray(story.tags);
       const q = searchQuery.toLowerCase();
-      const matchesSearch = !q || story.title?.toLowerCase().includes(q) || story.synopsis?.toLowerCase().includes(q) || story.tags?.some((t) => t.toLowerCase().includes(q));
-      const matchesFilter = selectedFilters.length === 0 || selectedFilters.some((f) => story.tags?.some((t) => t.toLowerCase() === f.toLowerCase()));
+      const matchesSearch = !q || story.title?.toLowerCase().includes(q) || story.synopsis?.toLowerCase().includes(q) || tags.some((t) => String(t).toLowerCase().includes(q));
+      const matchesFilter = selectedFilters.length === 0 || selectedFilters.some((f) => tags.some((t) => String(t).toLowerCase() === f.toLowerCase()));
       const matchesStatus = selectedStatus.length === 0 || selectedStatus.includes(story.status);
       return matchesSearch && matchesFilter && matchesStatus;
     })
-    .sort((a, b) => a.title.localeCompare(b.title)), [stories, searchQuery, selectedFilters, selectedStatus]);
+    .sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""))), [stories, searchQuery, selectedFilters, selectedStatus]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const clampedPage = Math.min(currentPage, Math.max(1, totalPages));
