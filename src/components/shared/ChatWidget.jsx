@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, Send, X, Loader2 } from "lucide-react";
 import { supabase } from "@/api/supabaseClient";
+import ChatRulesGate from "@/components/blog/ChatRulesGate";
 
 const TOKEN_KEY = "andromeda-chat-token";
 const NAME_KEY = "andromeda-chat-name";
+const RULES_KEY_PREFIX = "andromeda-chat-rules-accepted-";
 const ROOM_ID = 1;
 
 function getToken() {
@@ -23,10 +25,17 @@ export default function ChatWidget() {
   const [name, setName] = useState(() => localStorage.getItem(NAME_KEY) || "");
   const [draft, setDraft] = useState("");
   const [userId, setUserId] = useState(null);
+  const [isBanned, setIsBanned] = useState(false);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const endRef = useRef(null);
   const token = useMemo(getToken, []);
+  const rulesKey = `${RULES_KEY_PREFIX}${token}`;
+
+  useEffect(() => {
+    setRulesAccepted(localStorage.getItem(rulesKey) === "true");
+  }, [rulesKey]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -47,8 +56,8 @@ export default function ChatWidget() {
       if (existing) {
         if (!cancelled) {
           setUserId(existing.id);
+          setIsBanned(Boolean(existing.is_banned));
           if (existing.display_name && !name) setName(existing.display_name);
-          if (existing.is_banned) setError("You are currently unable to use chat.");
         }
         return;
       }
@@ -56,12 +65,15 @@ export default function ChatWidget() {
       const { data: created, error: createError } = await supabase
         .from("chat_users")
         .insert({ user_token: token, display_name: name.trim() || "Starling", is_banned: false })
-        .select("id")
+        .select("id, is_banned")
         .single();
 
       if (!cancelled) {
         if (createError) setError("Chat is temporarily unavailable.");
-        else setUserId(created.id);
+        else {
+          setUserId(created.id);
+          setIsBanned(Boolean(created.is_banned));
+        }
       }
     }
 
@@ -78,7 +90,7 @@ export default function ChatWidget() {
       .eq("is_deleted", false)
       .order("created_at", { ascending: true })
       .limit(100);
-    if (!loadError) setMessages(data || []);
+    if (!loadError) setMessages(Array.isArray(data) ? data : []);
   };
 
   useEffect(() => {
@@ -100,11 +112,16 @@ export default function ChatWidget() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
 
+  const acceptRules = () => {
+    localStorage.setItem(rulesKey, "true");
+    setRulesAccepted(true);
+  };
+
   const sendMessage = async (event) => {
     event.preventDefault();
     const content = draft.trim();
     const displayName = name.trim() || "Starling";
-    if (!content || !userId || !supabase || loading) return;
+    if (!content || !userId || !supabase || loading || isBanned || !rulesAccepted) return;
 
     setLoading(true);
     setError("");
@@ -118,8 +135,11 @@ export default function ChatWidget() {
       is_deleted: false,
     });
 
-    if (sendError) setError(sendError.message.includes("chat_can_send") ? "You are sending messages too quickly. Try again in a moment." : "Couldn't send that message.");
-    else {
+    if (sendError) {
+      setError(sendError.message.includes("chat_can_send")
+        ? "You are sending messages too quickly. Try again in a moment."
+        : "Couldn't send that message.");
+    } else {
       setDraft("");
       await loadMessages();
     }
@@ -129,7 +149,7 @@ export default function ChatWidget() {
   return (
     <div className="fixed bottom-20 left-4 lg:bottom-6 lg:left-6 z-50">
       {open && (
-        <div className="mb-3 w-[min(90vw,380px)] h-[min(70vh,520px)] flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-2xl backdrop-blur-xl">
+        <div className="mb-3 w-[min(90vw,380px)] max-h-[70vh] flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/95 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
             <div>
               <p className="font-heading font-semibold">Starlings' Chat</p>
@@ -138,7 +158,7 @@ export default function ChatWidget() {
             <button onClick={() => setOpen(false)} className="rounded-md p-1.5 text-muted-foreground hover:text-foreground" aria-label="Close chat"><X className="h-4 w-4" /></button>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-3 p-4">
+          <div className="flex-1 overflow-y-auto space-y-3 p-4 min-h-[160px]">
             {messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">No messages yet. Be the first Starling to say hi!</p>}
             {messages.map((message) => (
               <div key={message.id} className="rounded-xl bg-muted/50 px-3 py-2">
@@ -152,16 +172,24 @@ export default function ChatWidget() {
             <div ref={endRef} />
           </div>
 
-          <form onSubmit={sendMessage} className="border-t border-border/40 p-3 space-y-2">
-            <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => localStorage.setItem(NAME_KEY, name.trim() || "Starling")} maxLength={40} placeholder="Your display name" className="w-full rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-xs outline-none focus:border-primary" />
-            <div className="flex gap-2">
-              <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={2000} placeholder="Say something..." className="min-w-0 flex-1 rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-sm outline-none focus:border-primary" />
-              <button disabled={loading || !userId || !draft.trim()} className="rounded-lg bg-primary px-3 text-primary-foreground disabled:opacity-50" aria-label="Send message">
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </button>
+          {isBanned ? (
+            <div className="border-t border-border/40 p-4 text-center text-sm text-destructive">You are currently unable to use chat.</div>
+          ) : !rulesAccepted ? (
+            <div className="border-t border-border/40">
+              <ChatRulesGate onAccept={acceptRules} />
             </div>
-            {error && <p className="text-[11px] text-destructive">{error}</p>}
-          </form>
+          ) : (
+            <form onSubmit={sendMessage} className="border-t border-border/40 p-3 space-y-2">
+              <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => localStorage.setItem(NAME_KEY, name.trim() || "Starling")} maxLength={40} placeholder="Your display name" className="w-full rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-xs outline-none focus:border-primary" />
+              <div className="flex gap-2">
+                <input value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={2000} placeholder="Say something..." className="min-w-0 flex-1 rounded-lg border border-border/60 bg-background/70 px-3 py-2 text-sm outline-none focus:border-primary" />
+                <button disabled={loading || !userId || !draft.trim()} className="rounded-lg bg-primary px-3 text-primary-foreground disabled:opacity-50" aria-label="Send message">
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              </div>
+              {error && <p className="text-[11px] text-destructive">{error}</p>}
+            </form>
+          )}
         </div>
       )}
 
