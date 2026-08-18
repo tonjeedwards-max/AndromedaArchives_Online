@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { requireSupabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
-import { countWords, sanitizeChapterHtml } from "@/lib/htmlContent";
-import { Loader2, Upload, Save, Eye, FileText, BookOpen, Newspaper } from "lucide-react";
+import { countWords, htmlToPlainText, sanitizeChapterHtml } from "@/lib/htmlContent";
+import { Loader2, Upload, Save, Eye, FileText, BookOpen, Newspaper, RefreshCw } from "lucide-react";
 
 const emptyChapter = { story_id: "", chapter_number: 1, title: "", content: "", published: false };
 const emptyStory = { story_code: "", title: "", synopsis: "", description: "", cover_image: "", tags: "", status: "in_orbit", hidden: false, sort_order: 0 };
-const emptyBlog = { blog_id: "", title: "", content: "", excerpt: "", tags: "", published: false, published_at: "" };
+const emptyBlog = { blog_id: "", title: "", content: "", excerpt: "", tags: "", published_at: "" };
 
 export default function AdminContent() {
   const { user, isAdmin } = useAuth();
@@ -21,19 +21,26 @@ export default function AdminContent() {
   const [saving, setSaving] = useState(false);
   const [loadingStories, setLoadingStories] = useState(true);
 
+  const loadStories = async () => {
+    setLoadingStories(true);
+    const { data, error: loadError } = await requireSupabase().from("stories").select("id, story_code, title").order("title");
+    if (loadError) setError(loadError.message);
+    setStories(data || []);
+    setLoadingStories(false);
+  };
+
   useEffect(() => {
-    requireSupabase().from("stories").select("id, story_code, title").order("title").then(({ data, error }) => {
-      if (error) setError(error.message);
-      setStories(data || []);
-      setLoadingStories(false);
-    });
-  }, []);
+    if (isAdmin) loadStories();
+  }, [isAdmin]);
 
   const wordCount = useMemo(() => countWords(chapter.content), [chapter.content]);
+
+  const clearStatus = () => { setMessage(""); setError(""); };
 
   const handleHtmlFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    clearStatus();
     try {
       const html = await file.text();
       const safe = sanitizeChapterHtml(html);
@@ -42,11 +49,13 @@ export default function AdminContent() {
       setPreview(true);
     } catch (err) {
       setError(err.message || "Unable to read HTML file.");
+    } finally {
+      event.target.value = "";
     }
   };
 
   const saveChapter = async (publish = false) => {
-    setSaving(true); setError(""); setMessage("");
+    setSaving(true); clearStatus();
     try {
       if (!chapter.story_id || !chapter.title.trim() || !chapter.content.trim()) throw new Error("Story, chapter title, and HTML content are required.");
       const safe = sanitizeChapterHtml(chapter.content);
@@ -59,44 +68,46 @@ export default function AdminContent() {
         word_count: countWords(safe),
         media: [],
       };
-      const { error } = await requireSupabase().from("chapters").upsert(payload, { onConflict: "story_id,chapter_number" });
-      if (error) throw error;
+      const { error: saveError } = await requireSupabase().from("chapters").upsert(payload, { onConflict: "story_id,chapter_number" });
+      if (saveError) throw saveError;
       setChapter((current) => ({ ...emptyChapter, chapter_number: Number(current.chapter_number) + 1, story_id: current.story_id }));
+      setPreview(false);
       setMessage(publish ? "Chapter published." : "Chapter saved as draft.");
     } catch (err) { setError(err.message || "Unable to save chapter."); }
     finally { setSaving(false); }
   };
 
   const saveStory = async () => {
-    setSaving(true); setError(""); setMessage("");
+    setSaving(true); clearStatus();
     try {
       if (!story.story_code.trim() || !story.title.trim()) throw new Error("Story code and title are required.");
       const tags = story.tags.split(",").map((tag) => tag.trim()).filter(Boolean);
       const payload = { story_code: story.story_code.trim(), title: story.title.trim(), synopsis: story.synopsis, description: story.description, cover_image: story.cover_image, tags, status: story.status, hidden: story.hidden, sort_order: Number(story.sort_order) || 0 };
-      const { error } = await requireSupabase().from("stories").upsert(payload, { onConflict: "story_code" });
-      if (error) throw error;
+      const { error: saveError } = await requireSupabase().from("stories").upsert(payload, { onConflict: "story_code" });
+      if (saveError) throw saveError;
+      await loadStories();
       setMessage("Story saved.");
-      const { data } = await requireSupabase().from("stories").select("id, story_code, title").order("title");
-      setStories(data || []);
     } catch (err) { setError(err.message || "Unable to save story."); }
     finally { setSaving(false); }
   };
 
   const saveBlog = async (publish = false) => {
-    setSaving(true); setError(""); setMessage("");
+    setSaving(true); clearStatus();
     try {
       if (!blog.title.trim()) throw new Error("Blog title is required.");
+      const safe = sanitizeChapterHtml(blog.content);
+      const plain = htmlToPlainText(safe);
       const payload = {
         ...(blog.blog_id ? { blog_id: Number(blog.blog_id) } : {}),
         title: blog.title.trim(),
-        content: sanitizeChapterHtml(blog.content),
-        excerpt: blog.excerpt || countWords(blog.content) ? (blog.excerpt || blog.content.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 220)) : "",
+        content: safe,
+        excerpt: blog.excerpt.trim() || plain.slice(0, 220),
         tags: blog.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
         published: publish,
         published_at: publish ? (blog.published_at || new Date().toISOString()) : null,
       };
-      const { error } = await requireSupabase().from("blogs").upsert(payload, { onConflict: "blog_id" });
-      if (error) throw error;
+      const { error: saveError } = await requireSupabase().from("blogs").upsert(payload, { onConflict: "blog_id" });
+      if (saveError) throw saveError;
       setMessage(publish ? "Blog post published." : "Blog post saved as draft.");
     } catch (err) { setError(err.message || "Unable to save blog post."); }
     finally { setSaving(false); }
@@ -110,7 +121,7 @@ export default function AdminContent() {
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
       <div className="mb-8"><h1 className="text-3xl font-semibold tracking-tight">Content Manager</h1><p className="mt-2 text-muted-foreground">Upload and publish stories, HTML chapters, and blog posts directly to Supabase.</p></div>
       <div className="flex flex-wrap gap-2 mb-6">
-        {[['stories','Stories',BookOpen],['chapters','Chapters',FileText],['blogs','Blogs',Newspaper]].map(([key,label,Icon]) => <button key={key} onClick={() => { setTab(key); setMessage(""); setError(""); }} className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm ${tab === key ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-muted'}`}><Icon className="w-4 h-4" />{label}</button>)}
+        {[['stories','Stories',BookOpen],['chapters','Chapters',FileText],['blogs','Blogs',Newspaper]].map(([key,label,Icon]) => <button key={key} onClick={() => { setTab(key); clearStatus(); }} className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm ${tab === key ? 'bg-primary text-primary-foreground' : 'bg-card hover:bg-muted'}`}><Icon className="w-4 h-4" />{label}</button>)}
       </div>
       {message && <div className="mb-5 rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm">{message}</div>}
       {error && <div className="mb-5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">{error}</div>}
@@ -122,7 +133,7 @@ export default function AdminContent() {
           <label className="text-sm">Chapter number<input type="number" min="1" value={chapter.chapter_number} onChange={e=>setChapter({...chapter,chapter_number:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label>
           <label className="text-sm">Title<input value={chapter.title} onChange={e=>setChapter({...chapter,title:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label>
         </div>
-        <div className="flex flex-wrap gap-3 items-center"><label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm hover:bg-muted"><Upload className="w-4 h-4" />Upload HTML<input type="file" accept=".html,.htm,text/html" onChange={handleHtmlFile} className="hidden" /></label><span className="text-sm text-muted-foreground">{wordCount.toLocaleString()} words</span><button onClick={()=>setPreview(!preview)} className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm hover:bg-muted"><Eye className="w-4 h-4" />{preview ? 'Edit HTML' : 'Preview'}</button></div>
+        <div className="flex flex-wrap gap-3 items-center"><label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm hover:bg-muted"><Upload className="w-4 h-4" />Upload HTML<input type="file" accept=".html,.htm,text/html" onChange={handleHtmlFile} className="hidden" /></label><button onClick={loadStories} disabled={loadingStories} className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm hover:bg-muted"><RefreshCw className={`w-4 h-4 ${loadingStories ? 'animate-spin' : ''}`} />Refresh stories</button><span className="text-sm text-muted-foreground">{wordCount.toLocaleString()} words</span><button onClick={()=>setPreview(!preview)} className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm hover:bg-muted"><Eye className="w-4 h-4" />{preview ? 'Edit HTML' : 'Preview'}</button></div>
         {!preview ? <textarea value={chapter.content} onChange={e=>setChapter({...chapter,content:e.target.value})} placeholder="Paste chapter HTML here..." className="min-h-[420px] w-full rounded-md border bg-background p-4 font-mono text-sm" /> : <div className="min-h-[420px] rounded-md border bg-background p-6 prose prose-lg max-w-none" dangerouslySetInnerHTML={{__html:sanitizeChapterHtml(chapter.content)}} />}
         <div className="flex gap-3"><button disabled={saving} onClick={()=>saveChapter(false)} className="inline-flex items-center gap-2 rounded-md border px-5 py-2.5 text-sm hover:bg-muted">{saving?<Loader2 className="w-4 h-4 animate-spin"/>:<Save className="w-4 h-4"/>}Save Draft</button><button disabled={saving} onClick={()=>saveChapter(true)} className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-5 py-2.5 text-sm hover:opacity-90">Publish</button></div>
       </section>}
