@@ -1,6 +1,5 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import ReactMarkdown from "react-markdown";
@@ -11,13 +10,25 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import BlogShare from "@/components/blog/BlogShare";
 import BlogCommentBox from "@/components/blog/BlogCommentBox";
+import { requireSupabase } from "@/api/supabaseClient";
 
 export default function BlogPostDetail() {
   const { blogId } = useParams();
 
-  const { data: post, isLoading } = useQuery({
+  const { data: post, isLoading, error } = useQuery({
     queryKey: ["blog-post", blogId],
-    queryFn: () => base44.entities.BlogPost.get(blogId),
+    queryFn: async () => {
+      const supabase = requireSupabase();
+      const { data, error } = await supabase
+        .from("blogs")
+        .select("blog_id,title,excerpt,content,tags,published,published_date,published_at,created_at,updated_at")
+        .eq("blog_id", blogId)
+        .eq("published", true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
+    },
     enabled: !!blogId,
   });
 
@@ -29,7 +40,7 @@ export default function BlogPostDetail() {
     );
   }
 
-  if (!post) {
+  if (error || !post) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-24 pb-16 text-center">
         <p className="text-muted-foreground font-light">Blog post not found.</p>
@@ -40,7 +51,8 @@ export default function BlogPostDetail() {
     );
   }
 
-  const displayDate = post.publish_date || post.created_date;
+  const displayDate = post.published_date || post.published_at || post.created_at;
+  const tags = Array.isArray(post.tags) ? post.tags : [];
 
   return (
     <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-16">
@@ -73,12 +85,6 @@ export default function BlogPostDetail() {
             </div>
           )}
         </div>
-
-        {post.cover_image && (
-          <div className="mt-4 overflow-hidden">
-            <img src={post.cover_image} alt={post.title} className="w-full max-h-96 object-cover" />
-          </div>
-        )}
 
         <div className="px-6 sm:px-8 py-6 reader-content">
           <ReactMarkdown
@@ -119,14 +125,14 @@ export default function BlogPostDetail() {
           </ReactMarkdown>
         </div>
 
-        {post.tags && post.tags.length > 0 && (
+        {tags.length > 0 && (
           <div className="px-6 sm:px-8 py-5 border-t border-border/30">
             <div className="flex items-center gap-2 mb-3">
               <Tag className="w-4 h-4 text-accent" />
               <span className="text-sm font-medium text-muted-foreground">Tags</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
+              {tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="text-xs px-2.5 py-1 bg-muted/60 text-muted-foreground border-0 capitalize">
                   {tag}
                 </Badge>
