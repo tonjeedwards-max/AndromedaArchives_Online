@@ -2,11 +2,25 @@ import React, { useEffect, useMemo, useState } from "react";
 import { requireSupabase } from "@/api/supabaseClient";
 import { useAuth } from "@/lib/AuthContext";
 import { countWords, htmlToPlainText, sanitizeChapterHtml } from "@/lib/htmlContent";
-import { Loader2, Upload, Save, Eye, FileText, BookOpen, Newspaper, RefreshCw } from "lucide-react";
+import { Loader2, Upload, Save, Eye, FileText, BookOpen, Newspaper, RefreshCw, CalendarClock } from "lucide-react";
 
 const emptyChapter = { story_id: "", chapter_number: 1, title: "", content: "", published: false };
 const emptyStory = { story_code: "", title: "", synopsis: "", description: "", cover_image: "", tags: "", status: "in_orbit", hidden: false, sort_order: 0 };
-const emptyBlog = { blog_id: "", title: "", content: "", excerpt: "", tags: "", published_at: "" };
+const emptyBlog = { blog_id: "", title: "", content: "", excerpt: "", tags: "", publishMode: "draft", publishAt: "" };
+
+function toLocalDateTimeInput(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function localInputToIso(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
 
 export default function AdminContent() {
   const { user, isAdmin } = useAuth();
@@ -34,7 +48,6 @@ export default function AdminContent() {
   }, [isAdmin]);
 
   const wordCount = useMemo(() => countWords(chapter.content), [chapter.content]);
-
   const clearStatus = () => { setMessage(""); setError(""); };
 
   const handleHtmlFile = async (event) => {
@@ -91,24 +104,42 @@ export default function AdminContent() {
     finally { setSaving(false); }
   };
 
-  const saveBlog = async (publish = false) => {
+  const saveBlog = async () => {
     setSaving(true); clearStatus();
     try {
       if (!blog.title.trim()) throw new Error("Blog title is required.");
+
       const safe = sanitizeChapterHtml(blog.content);
       const plain = htmlToPlainText(safe);
+      let published = false;
+      let publishedAt = null;
+      let statusMessage = "Blog post saved as draft.";
+
+      if (blog.publishMode === "now") {
+        published = true;
+        publishedAt = new Date().toISOString();
+        statusMessage = "Blog post published.";
+      } else if (blog.publishMode === "scheduled") {
+        publishedAt = localInputToIso(blog.publishAt);
+        if (!publishedAt) throw new Error("Choose a date and time for scheduled publication.");
+        if (new Date(publishedAt).getTime() <= Date.now()) throw new Error("Scheduled publication must be in the future. Use Publish now for an immediate release.");
+        statusMessage = `Blog post scheduled for ${new Date(publishedAt).toLocaleString()}.`;
+      }
+
       const payload = {
         ...(blog.blog_id ? { blog_id: Number(blog.blog_id) } : {}),
         title: blog.title.trim(),
         content: safe,
         excerpt: blog.excerpt.trim() || plain.slice(0, 220),
         tags: blog.tags.split(",").map((tag) => tag.trim()).filter(Boolean),
-        published: publish,
-        published_at: publish ? (blog.published_at || new Date().toISOString()) : null,
+        published,
+        published_at: publishedAt,
       };
+
       const { error: saveError } = await requireSupabase().from("blogs").upsert(payload, { onConflict: "blog_id" });
       if (saveError) throw saveError;
-      setMessage(publish ? "Blog post published." : "Blog post saved as draft.");
+      setBlog(emptyBlog);
+      setMessage(statusMessage);
     } catch (err) { setError(err.message || "Unable to save blog post."); }
     finally { setSaving(false); }
   };
@@ -140,7 +171,29 @@ export default function AdminContent() {
 
       {tab === "stories" && <section className="rounded-xl border bg-card p-6 space-y-5"><h2 className="text-xl font-semibold">Story</h2><div className="grid gap-5 md:grid-cols-2"><label className="text-sm">Story code<input value={story.story_code} onChange={e=>setStory({...story,story_code:e.target.value})} placeholder="BAF" className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label><label className="text-sm">Title<input value={story.title} onChange={e=>setStory({...story,title:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label></div><label className="text-sm block">Synopsis<textarea value={story.synopsis} onChange={e=>setStory({...story,synopsis:e.target.value})} className="mt-2 w-full rounded-md border bg-background p-3" /></label><label className="text-sm block">Description<textarea value={story.description} onChange={e=>setStory({...story,description:e.target.value})} className="mt-2 w-full rounded-md border bg-background p-3" /></label><div className="grid gap-5 md:grid-cols-3"><label className="text-sm">Cover image URL<input value={story.cover_image} onChange={e=>setStory({...story,cover_image:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label><label className="text-sm">Tags<input value={story.tags} onChange={e=>setStory({...story,tags:e.target.value})} placeholder="horror, romance" className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label><label className="text-sm">Status<select value={story.status} onChange={e=>setStory({...story,status:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2"><option value="in_orbit">In Orbit</option><option value="complete">Complete</option><option value="hiatus">Hiatus</option></select></label></div><button disabled={saving} onClick={saveStory} className="rounded-md bg-primary text-primary-foreground px-5 py-2.5 text-sm">Save Story</button></section>}
 
-      {tab === "blogs" && <section className="rounded-xl border bg-card p-6 space-y-5"><h2 className="text-xl font-semibold">Blog Post</h2><div className="grid gap-5 md:grid-cols-2"><label className="text-sm">Blog ID (leave blank for new)<input value={blog.blog_id} onChange={e=>setBlog({...blog,blog_id:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label><label className="text-sm">Title<input value={blog.title} onChange={e=>setBlog({...blog,title:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label></div><label className="text-sm block">Excerpt<input value={blog.excerpt} onChange={e=>setBlog({...blog,excerpt:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label><label className="text-sm block">Tags<input value={blog.tags} onChange={e=>setBlog({...blog,tags:e.target.value})} placeholder="character study, quick cut" className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label><textarea value={blog.content} onChange={e=>setBlog({...blog,content:e.target.value})} placeholder="Write or paste blog HTML..." className="min-h-[420px] w-full rounded-md border bg-background p-4 font-mono text-sm" /><div className="flex gap-3"><button disabled={saving} onClick={()=>saveBlog(false)} className="rounded-md border px-5 py-2.5 text-sm hover:bg-muted">Save Draft</button><button disabled={saving} onClick={()=>saveBlog(true)} className="rounded-md bg-primary text-primary-foreground px-5 py-2.5 text-sm">Publish</button></div></section>}
+      {tab === "blogs" && <section className="rounded-xl border bg-card p-6 space-y-5">
+        <div><h2 className="text-xl font-semibold">Blog Post</h2><p className="text-sm text-muted-foreground">Prepare posts in advance and let Supabase publish scheduled posts automatically.</p></div>
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="text-sm">Blog ID (leave blank for new)<input value={blog.blog_id} onChange={e=>setBlog({...blog,blog_id:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label>
+          <label className="text-sm">Title<input value={blog.title} onChange={e=>setBlog({...blog,title:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label>
+        </div>
+        <label className="text-sm block">Excerpt<input value={blog.excerpt} onChange={e=>setBlog({...blog,excerpt:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label>
+        <label className="text-sm block">Tags<input value={blog.tags} onChange={e=>setBlog({...blog,tags:e.target.value})} placeholder="character study, quick cut" className="mt-2 w-full rounded-md border bg-background px-3 py-2" /></label>
+        <textarea value={blog.content} onChange={e=>setBlog({...blog,content:e.target.value})} placeholder="Write or paste blog HTML..." className="min-h-[420px] w-full rounded-md border bg-background p-4 font-mono text-sm" />
+
+        <div className="rounded-xl border bg-background/50 p-4 space-y-4">
+          <div className="flex items-center gap-2"><CalendarClock className="w-5 h-5" /><div><h3 className="font-medium">Publication</h3><p className="text-xs text-muted-foreground">Schedule now and the backend will publish it automatically.</p></div></div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <button type="button" onClick={()=>setBlog({...blog,publishMode:"draft"})} className={`rounded-lg border px-4 py-3 text-left ${blog.publishMode === "draft" ? "border-primary bg-primary/10" : "hover:bg-muted"}`}><div className="font-medium">Save as draft</div><div className="text-xs text-muted-foreground">Keep it unpublished</div></button>
+            <button type="button" onClick={()=>setBlog({...blog,publishMode:"now"})} className={`rounded-lg border px-4 py-3 text-left ${blog.publishMode === "now" ? "border-primary bg-primary/10" : "hover:bg-muted"}`}><div className="font-medium">Publish now</div><div className="text-xs text-muted-foreground">Release immediately</div></button>
+            <button type="button" onClick={()=>setBlog({...blog,publishMode:"scheduled"})} className={`rounded-lg border px-4 py-3 text-left ${blog.publishMode === "scheduled" ? "border-primary bg-primary/10" : "hover:bg-muted"}`}><div className="font-medium">Schedule</div><div className="text-xs text-muted-foreground">Release automatically</div></button>
+          </div>
+          {blog.publishMode === "scheduled" && <label className="block text-sm">Publish date & time<input type="datetime-local" value={blog.publishAt} min={toLocalDateTimeInput(new Date(Date.now() + 60000))} onChange={e=>setBlog({...blog,publishAt:e.target.value})} className="mt-2 w-full rounded-md border bg-background px-3 py-2" /><span className="mt-1 block text-xs text-muted-foreground">Your local time is converted to UTC before it is stored.</span></label>}
+          {blog.publishMode === "scheduled" && blog.publishAt && <div className="rounded-md bg-primary/10 p-3 text-sm">Scheduled for <strong>{new Date(blog.publishAt).toLocaleString()}</strong>. The blog stays hidden until the scheduled time, then the backend publishes it and sends the subscriber notification.</div>}
+        </div>
+
+        <div className="flex gap-3"><button disabled={saving} onClick={saveBlog} className="inline-flex items-center gap-2 rounded-md bg-primary text-primary-foreground px-5 py-2.5 text-sm">{saving?<Loader2 className="w-4 h-4 animate-spin"/>:<Save className="w-4 h-4"/>}{blog.publishMode === "now" ? "Publish" : blog.publishMode === "scheduled" ? "Schedule Post" : "Save Draft"}</button></div>
+      </section>}
     </main>
   );
 }
