@@ -28,8 +28,8 @@ export default function Navbar() {
     document.documentElement.classList.toggle("dark", next === "dark");
     document.documentElement.style.colorScheme = next;
   };
-  const openChat = () => {
-    window.dispatchEvent(new CustomEvent("andromeda-open-chat"));
+  const toggleChat = () => {
+    window.dispatchEvent(new CustomEvent("andromeda:open-chat"));
     setMobileOpen(false);
   };
 
@@ -43,7 +43,7 @@ export default function Navbar() {
     <AnimatePresence>{mobileOpen && <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="lg:hidden border-t border-border/40 bg-background/95 backdrop-blur-xl">
       <div className="px-6 py-4 space-y-3">
         {navLinks.map((link) => <Link key={link.path} to={link.path} onClick={() => setMobileOpen(false)} className={`block text-sm font-medium tracking-wider uppercase py-2 ${location.pathname === link.path ? "text-accent" : "text-foreground/70"}`}>{link.label}</Link>)}
-        <button type="button" onClick={openChat} className="w-full flex items-center gap-2 text-left text-sm font-medium tracking-wider uppercase py-2 text-foreground/70 hover:text-foreground"><MessageCircle className="w-4 h-4" />Chat</button>
+        <button type="button" onClick={toggleChat} className="w-full flex items-center gap-2 text-left text-sm font-medium tracking-wider uppercase py-2 text-foreground/70 hover:text-foreground"><MessageCircle className="w-4 h-4" />Chat</button>
         <div className="border-t border-border/30 pt-4 mt-2"><p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-2">Subscribe to Andromeda</p><SubscribeForm /></div>
       </div>
     </motion.div>}</AnimatePresence>
