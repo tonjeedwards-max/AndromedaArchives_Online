@@ -8,13 +8,13 @@ export default function Footer() {
     <footer className="border-t border-border/40 bg-background/80 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-12">
         {/* Subscribe */}
-        <div className="hidden lg:flex lg:flex-row items-center justify-between gap-4 pb-8 border-b border-border/30">
-          <div className="text-center md:text-left">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-5 pb-8 border-b border-border/30">
+          <div className="text-center lg:text-left">
             <h3 className="font-heading text-lg font-semibold mb-1">
               Subscribe to The Andromeda Archive
             </h3>
             <p className="text-sm text-muted-foreground font-light">
-              Get notified when new chapters and posts arrive.
+              Confirm your email to get notified when new blog posts arrive.
             </p>
           </div>
           <SubscribeForm />
