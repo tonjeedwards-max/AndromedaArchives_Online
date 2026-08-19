@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { BookOpen, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { getOptimizedCover, COVER_WIDTH, COVER_HEIGHT } from "@/lib/storyCover";
 
 export default function ChapterUpdateCard({ chapter, story, index }) {
   if (!chapter) return null;
@@ -13,11 +14,29 @@ export default function ChapterUpdateCard({ chapter, story, index }) {
   const chapterPath = storyCode && Number.isInteger(chapterNumber)
     ? `/story/${storyCode}/chapter/${chapterNumber}`
     : `/stories`;
+  const coverSrc = getOptimizedCover(story);
 
   return (
     <motion.article initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: index * 0.08 }} className="bg-card/70 backdrop-blur-sm border border-border/50 rounded-xl overflow-hidden shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300">
       <Link to={chapterPath} className="flex flex-col sm:flex-row">
-        {story?.cover_image && <div className="sm:w-32 shrink-0 overflow-hidden bg-muted/30"><img src={story.cover_image} alt={story.title} className="w-full h-32 sm:h-full object-cover" /></div>}
+        {coverSrc && (
+          <div className="sm:w-32 shrink-0 overflow-hidden bg-muted/30">
+            <img
+              src={coverSrc}
+              alt={story?.title || "Story cover"}
+              width={COVER_WIDTH}
+              height={COVER_HEIGHT}
+              loading="lazy"
+              decoding="async"
+              onError={(event) => {
+                if (story?.cover_image && event.currentTarget.src !== story.cover_image) {
+                  event.currentTarget.src = story.cover_image;
+                }
+              }}
+              className="w-full h-32 sm:h-full object-cover"
+            />
+          </div>
+        )}
         <div className="flex-1 p-5 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary border-0"><BookOpen className="w-2.5 h-2.5 mr-1" />New Chapter</Badge>
