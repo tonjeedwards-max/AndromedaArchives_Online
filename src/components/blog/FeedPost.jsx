@@ -6,6 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 export default function FeedPost({ post, index, showReadMore = true }) {
+  const blogId = post?.blog_id ?? post?.id;
+  const blogPath = blogId != null ? `/blog/${blogId}` : "/blog";
+  const displayDate = post?.published_date || post?.publish_date || post?.published_at || post?.created_at || post?.created_date;
+  const tags = Array.isArray(post?.tags) ? post.tags : [];
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 20 }}
@@ -21,7 +26,7 @@ export default function FeedPost({ post, index, showReadMore = true }) {
           <p className="text-sm font-medium text-foreground/80">The Andromeda Archive</p>
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Calendar className="w-3 h-3" />
-            {(post.publish_date || post.created_date) ? format(new Date(post.publish_date || post.created_date), "MMM d, yyyy") : "Recent"}
+            {displayDate ? format(new Date(displayDate), "MMM d, yyyy") : "Recent"}
           </span>
         </div>
       </div>
@@ -33,7 +38,7 @@ export default function FeedPost({ post, index, showReadMore = true }) {
       )}
 
       <div className="px-5 py-4">
-        <Link to={`/blog/${post.id}`}>
+        <Link to={blogPath}>
           <h2 className="font-heading text-xl font-semibold mb-2 hover:text-accent transition-colors">
             {post.title}
           </h2>
@@ -44,9 +49,9 @@ export default function FeedPost({ post, index, showReadMore = true }) {
           </p>
         )}
 
-        {post.tags?.length > 0 && (
+        {tags.length > 0 && (
           <div className="flex items-center gap-2 mt-3 flex-wrap">
-            {post.tags.slice(0, 4).map((tag) => (
+            {tags.slice(0, 4).map((tag) => (
               <Badge key={tag} variant="secondary" className="text-[10px] px-2 py-0 bg-muted/60 text-muted-foreground border-0">
                 <Tag className="w-2.5 h-2.5 mr-1" />
                 {tag}
@@ -56,7 +61,7 @@ export default function FeedPost({ post, index, showReadMore = true }) {
         )}
 
         {showReadMore && (
-          <Link to={`/blog/${post.id}`} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-accent transition-colors mt-4">
+          <Link to={blogPath} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-accent transition-colors mt-4">
             Read more
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
