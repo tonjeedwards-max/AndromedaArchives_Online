@@ -8,12 +8,21 @@ function isHTML(content) {
 
 export default function MediaContent({ content, media, renderers }) {
   const mediaItems = media?.filter(Boolean) || [];
-  const safeContent = React.useMemo(() => isHTML(content) ? sanitizeChapterHtml(content) : content || "", [content]);
+  const safeContent = React.useMemo(
+    () => (isHTML(content) ? sanitizeChapterHtml(content) : content || ""),
+    [content]
+  );
 
-  // Uploaded chapter HTML is sanitized before rendering. This keeps literary
-  // formatting while preventing scripts, event handlers, and unsafe embeds.
+  // Uploaded chapter HTML is sanitized before rendering. Keep the wrapper
+  // class separate from the site's generic prose styles so the uploaded
+  // document gets predictable literary spacing inside the reader.
   if (isHTML(content) && mediaItems.length === 0) {
-    return <div dangerouslySetInnerHTML={{ __html: safeContent }} />;
+    return (
+      <div
+        className="reader-html-content"
+        dangerouslySetInnerHTML={{ __html: safeContent }}
+      />
+    );
   }
 
   if (mediaItems.length === 0) {
