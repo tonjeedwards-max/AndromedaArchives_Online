@@ -21,6 +21,9 @@ import SearchPage from '@/pages/SearchPage';
 import AdminChapters from '@/pages/AdminChapters';
 import AdminContent from '@/pages/AdminContent';
 
+export const ANDROMEDA_BUILD = 'supabase-reader-v3-2026-08-18';
+if (typeof window !== 'undefined') console.info(`[Andromeda Archives] ${ANDROMEDA_BUILD}`);
+
 const AuthenticatedApp = () => {
   const { authError, navigateToLogin } = useAuth();
 
