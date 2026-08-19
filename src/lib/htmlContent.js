@@ -20,12 +20,19 @@ const isSafeUrl = (value, allowDataImage = false) => {
 
 export function sanitizeChapterHtml(html) {
   if (!html) return "";
+
   const parser = new DOMParser();
   const document = parser.parseFromString(html, "text/html");
+  const body = document.body;
 
-  document.querySelectorAll("script, style, iframe, object, embed, form, input, button, textarea, select, meta, link, base").forEach((node) => node.remove());
+  // Remove document-level elements that should never be part of chapter content.
+  body.querySelectorAll("script, style, iframe, object, embed, form, input, button, textarea, select, meta, link, base").forEach((node) => node.remove());
 
-  document.querySelectorAll("*").forEach((element) => {
+  // IMPORTANT: only inspect elements inside <body>.
+  // Inspecting document.querySelectorAll("*") also includes <html> and <body>.
+  // Replacing <body> itself with its children causes the browser to throw:
+  // "HierarchyRequestError: Only one element on document allowed."
+  Array.from(body.querySelectorAll("*")).forEach((element) => {
     if (!ALLOWED_TAGS.has(element.tagName)) {
       element.replaceWith(...Array.from(element.childNodes));
       return;
@@ -39,7 +46,9 @@ export function sanitizeChapterHtml(html) {
 
     if (element.tagName === "A") {
       if (!isSafeUrl(element.getAttribute("href"))) element.removeAttribute("href");
-      if (element.getAttribute("target") === "_blank") element.setAttribute("rel", "noopener noreferrer");
+      if (element.getAttribute("target") === "_blank") {
+        element.setAttribute("rel", "noopener noreferrer");
+      }
     }
 
     if (element.tagName === "IMG" && !isSafeUrl(element.getAttribute("src"), true)) {
@@ -47,7 +56,7 @@ export function sanitizeChapterHtml(html) {
     }
   });
 
-  return document.body.innerHTML.trim();
+  return body.innerHTML.trim();
 }
 
 export function htmlToPlainText(html) {
