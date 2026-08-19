@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { base44 } from "@/api/base44Client";
+import { requireSupabase } from "@/api/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Sparkles, BookOpen, Loader2 } from "lucide-react";
@@ -10,64 +10,59 @@ import { useRecommendations } from "@/hooks/useRecommendations";
 import RecommendedStory from "@/components/home/RecommendedStory";
 import ContinueReadingCard from "@/components/home/ContinueReadingCard";
 
-const toArray = (value) => (Array.isArray(value) ? value : []);
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 export default function Home() {
   const { data: postsData } = useQuery({
     queryKey: ["home-blog-posts"],
-    queryFn: () => base44.entities.BlogPost.filter({ published: true }, "-created_date", 20),
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().from("blogs").select("*").eq("published", true).order("published_date", { ascending: false }).limit(20);
+      if (error) throw error;
+      return data || [];
+    },
   });
-  const posts = toArray(postsData);
+  const posts = asArray(postsData);
 
   const { data: chaptersData } = useQuery({
     queryKey: ["home-chapters"],
-    queryFn: () => base44.entities.Chapter.filter({ published: true }, "-created_date", 20),
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().from("chapters").select("*").eq("published", true).order("created_at", { ascending: false }).limit(20);
+      if (error) throw error;
+      return data || [];
+    },
   });
-  const chapters = toArray(chaptersData);
+  const chapters = asArray(chaptersData);
 
   const { data: storiesData } = useQuery({
     queryKey: ["home-stories"],
-    queryFn: () => base44.entities.Story.list(),
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().from("stories").select("*").eq("hidden", false).order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
   });
-  const stories = toArray(storiesData);
+  const stories = asArray(storiesData);
 
   const storyMap = useMemo(() => {
     const map = {};
-    stories.forEach((s) => {
-      if (s?.story_code) map[String(s.story_code)] = s;
+    stories.forEach((story) => {
+      if (story?.id != null) map[String(story.id)] = story;
     });
     return map;
   }, [stories]);
 
   const feed = useMemo(() => {
-    const blogItems = posts
-      .filter((p) => !p?.hidden)
-      .map((p) => ({ type: "blog", date: p.publish_date || p.created_date, data: p }))
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    const blogItems = posts.map((p) => ({ type: "blog", date: p.published_date || p.published_at || p.created_at, data: p }));
+    const chapterItems = chapters.map((c) => ({
+      type: "chapter",
+      date: c.created_at,
+      data: c,
+      story: storyMap[String(c.story_id)] || null,
+    }));
 
-    const chapterItems = chapters
-      .map((c) => ({
-        type: "chapter",
-        date: c.created_date,
-        data: c,
-        story: storyMap[String(c.story_id)] || null,
-      }))
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-
-    const merged = [];
-    const a = [...blogItems];
-    const b = [...chapterItems];
-    let takeBlog = a[0] && b[0] ? new Date(a[0].date || 0) >= new Date(b[0].date || 0) : a.length > 0;
-
-    while (a.length || b.length) {
-      const list = takeBlog ? a : b;
-      if (list.length) merged.push(list.shift());
-      else if (takeBlog && b.length) merged.push(b.shift());
-      else if (!takeBlog && a.length) merged.push(a.shift());
-      takeBlog = !takeBlog;
-    }
-
-    return merged.slice(0, 8);
+    return [...blogItems, ...chapterItems]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, 8);
   }, [posts, chapters, storyMap]);
 
   const isLoading = postsData === undefined && chaptersData === undefined && storiesData === undefined;
