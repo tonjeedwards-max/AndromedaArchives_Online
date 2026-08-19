@@ -38,9 +38,14 @@ export default function BlogCommentBox({ blogId }) {
 
   const handleSubmit = (e) => { e.preventDefault(); if (!name.trim() || !content.trim()) return; postComment({ author_name: name.trim(), content: content.trim() }); };
 
+  const visibleComments = comments.filter((c) => !c.parent_comment_id);
+
   return <section className="py-8 border-t border-border/30">
     <div className="flex items-center gap-2 mb-6"><MessageCircle className="w-5 h-5 text-primary" /><h3 className="font-heading text-xl font-semibold">Comments {comments.length > 0 && <span className="text-muted-foreground font-light text-base">({comments.length})</span>}</h3></div>
-    {isLoading ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : comments.length === 0 ? <p className="text-center text-muted-foreground font-light py-5 text-sm">No comments yet. Be the first to share what you think! ✨</p> : <div className="space-y-4 mb-8">{comments.filter((c) => !c.parent_comment_id).map((comment) => <CommentItem key={comment.id} comment={comment} allComments={comments} onReply={postComment} isPending={isPending} />)}</div>}
+
+    {/* Existing comments always come before the comment entry form. */}
+    {isLoading ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : visibleComments.length === 0 ? <p className="text-center text-muted-foreground font-light py-5 text-sm">No comments yet. Be the first to share what you think! ✨</p> : <div className="space-y-4 mb-8">{visibleComments.map((comment) => <CommentItem key={comment.id} comment={comment} allComments={comments} onReply={postComment} isPending={isPending} />)}</div>}
+
     <form onSubmit={handleSubmit} className="rounded-xl p-5 space-y-3 border bg-muted/30 border-border/40">
       <Input placeholder="Username" value={name} onChange={(e) => { setName(e.target.value); setNameError(""); }} className="bg-background/50 border-border/40 text-sm" maxLength={40} />
       {nameError && <p className="text-xs text-destructive">{nameError}</p>}
