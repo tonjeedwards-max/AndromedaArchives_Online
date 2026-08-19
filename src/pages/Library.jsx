@@ -30,8 +30,8 @@ function EntryList({ entries, onRemove, emptyMsg }) {
               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><BookOpen className="w-4 h-4 text-primary" /></div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">{entry.storyTitle}</p>
-                <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">{entry.title}</p>
-                {(entry.readAt || entry.addedAt) && <p className="text-[10px] text-muted-foreground mt-0.5">{formatDistanceToNow(new Date(entry.readAt || entry.addedAt), { addSuffix: true })}</p>}
+                <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">Last read: Chapter {chapterNumber}{entry.title ? ` — ${entry.title}` : ""}</p>
+                {entry.readAt && <p className="text-[10px] text-muted-foreground mt-0.5">{formatDistanceToNow(new Date(entry.readAt), { addSuffix: true })}</p>}
               </div>
             </Link>
             {onRemove && <button onClick={() => onRemove(entry)} className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100" title="Remove"><Trash2 className="w-3.5 h-3.5" /></button>}
@@ -44,11 +44,11 @@ function EntryList({ entries, onRemove, emptyMsg }) {
 
 export default function Library() {
   const [activeTab, setActiveTab] = useState("history");
-  const { history, bookmarks, toggleBookmark, favourites, toggleFavourite } = useReaderPrefs();
-  const progressCount = new Set(Object.values(history).map((h) => h.storyId).filter(Boolean)).size;
+  const { history, readChapters, toggleBookmark, bookmarks, favourites, toggleFavourite } = useReaderPrefs();
   const historyList = Object.values(history).sort((a, b) => new Date(b.readAt) - new Date(a.readAt));
   const bookmarkList = Object.values(bookmarks).sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
   const favouriteList = Object.values(favourites).sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+  const progressCount = new Set(Object.values(history).map((h) => h.storyId).filter(Boolean)).size;
 
   return (
     <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 pt-24 pb-12">
@@ -61,7 +61,7 @@ export default function Library() {
           </button>
         ))}
       </div>
-      {activeTab === "progress" && <StoryProgressList history={history} />}
+      {activeTab === "progress" && <StoryProgressList history={history} readChapters={readChapters} />}
       {activeTab === "history" && <EntryList entries={historyList} emptyMsg="You haven't read any chapters yet. Start exploring!" />}
       {activeTab === "bookmarks" && <EntryList entries={bookmarkList} onRemove={toggleBookmark} emptyMsg="No bookmarks yet. Bookmark chapters while reading to find them here." />}
       {activeTab === "favourites" && <EntryList entries={favouriteList} onRemove={toggleFavourite} emptyMsg="No favourites yet. Heart a chapter while reading to save it here." />}
