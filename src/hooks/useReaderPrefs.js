@@ -14,6 +14,10 @@ function save(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
+export function getHistoryKey(storyId, chapterNumber) {
+  return `${storyId}:${chapterNumber}`;
+}
+
 export function useReaderPrefs() {
   const [prefs, setPrefs] = useState(load);
 
@@ -25,59 +29,59 @@ export function useReaderPrefs() {
     });
   }, []);
 
-  // ── Night mode ────────────────────────────────────────────────
   const nightMode = prefs.nightMode ?? false;
   const setNightMode = (val) => update({ nightMode: val });
 
-  // ── Reading history  { chapterId: { storyId, title, storyTitle, readAt } }
   const history = prefs.history || {};
   const addToHistory = useCallback((entry) => {
     update((prev) => {
-      const existing = (prev.history || {})[entry.chapterId] || {};
+      const chapterNumber = entry.chapterNumber ?? entry.chapterId;
+      const key = entry.historyKey || getHistoryKey(entry.storyId, chapterNumber);
+      const existing = (prev.history || {})[key] || {};
       return {
         ...prev,
         history: {
           ...(prev.history || {}),
-          [entry.chapterId]: { ...existing, ...entry, readAt: new Date().toISOString() },
+          [key]: {
+            ...existing,
+            ...entry,
+            chapterNumber,
+            historyKey: key,
+            readAt: new Date().toISOString(),
+          },
         },
       };
     });
   }, [update]);
 
-  // Update saved reading position (scroll % or manga page) without resetting readAt
-  const updateHistoryPosition = useCallback((chapterId, position) => {
+  const updateHistoryPosition = useCallback((chapterOrKey, position, storyId = null) => {
     update((prev) => {
       const h = prev.history || {};
-      if (!h[chapterId]) return prev;
-      return { ...prev, history: { ...h, [chapterId]: { ...h[chapterId], ...position } } };
+      const key = storyId
+        ? getHistoryKey(storyId, chapterOrKey)
+        : String(chapterOrKey);
+      if (!h[key]) return prev;
+      return { ...prev, history: { ...h, [key]: { ...h[key], ...position } } };
     });
   }, [update]);
 
-  // ── Bookmarks  { chapterId: { storyId, title, storyTitle, addedAt } }
   const bookmarks = prefs.bookmarks || {};
   const toggleBookmark = useCallback((entry) => {
     update((prev) => {
       const bm = { ...(prev.bookmarks || {}) };
-      if (bm[entry.chapterId]) {
-        delete bm[entry.chapterId];
-      } else {
-        bm[entry.chapterId] = { ...entry, addedAt: new Date().toISOString() };
-      }
+      if (bm[entry.chapterId]) delete bm[entry.chapterId];
+      else bm[entry.chapterId] = { ...entry, addedAt: new Date().toISOString() };
       return { ...prev, bookmarks: bm };
     });
   }, [update]);
   const isBookmarked = (chapterId) => !!bookmarks[chapterId];
 
-  // ── Favourites  { chapterId: { storyId, title, storyTitle, addedAt } }
   const favourites = prefs.favourites || {};
   const toggleFavourite = useCallback((entry) => {
     update((prev) => {
       const fav = { ...(prev.favourites || {}) };
-      if (fav[entry.chapterId]) {
-        delete fav[entry.chapterId];
-      } else {
-        fav[entry.chapterId] = { ...entry, addedAt: new Date().toISOString() };
-      }
+      if (fav[entry.chapterId]) delete fav[entry.chapterId];
+      else fav[entry.chapterId] = { ...entry, addedAt: new Date().toISOString() };
       return { ...prev, favourites: fav };
     });
   }, [update]);
