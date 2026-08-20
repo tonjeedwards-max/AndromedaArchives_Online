@@ -29,7 +29,7 @@ export default function Navbar() {
     document.documentElement.style.colorScheme = next;
   };
   const toggleChat = () => {
-    window.dispatchEvent(new CustomEvent("andromeda:open-chat"));
+    window.dispatchEvent(new CustomEvent("andromeda-toggle-chat"));
     setMobileOpen(false);
   };
 
