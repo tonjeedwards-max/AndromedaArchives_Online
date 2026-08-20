@@ -68,13 +68,12 @@ export default function Home() {
   const isLoading = postsData === undefined && chaptersData === undefined && storiesData === undefined;
   const recommendation = useRecommendations(stories);
 
-  const feedItems = feed.map((item, i) =>
+  const renderFeedItem = (item, index) =>
     item.type === "blog" ? (
-      <FeedPost key={`blog-${item.data.blog_id}`} post={item.data} index={i} showReadMore={true} />
+      <FeedPost key={`blog-${item.data.blog_id}`} post={item.data} index={index} showReadMore={true} />
     ) : (
-      <ChapterUpdateCard key={`chapter-${item.data.id}`} chapter={item.data} story={item.story} index={i} />
-    )
-  );
+      <ChapterUpdateCard key={`chapter-${item.data.id}`} chapter={item.data} story={item.story} index={index} />
+    );
 
   return (
     <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-16">
@@ -110,10 +109,17 @@ export default function Home() {
               </Link>
             </div>
           ) : (
-            <div className="flex flex-col gap-6">{feedItems}</div>
+            <div className="flex flex-col gap-6">
+              {feed.map((item, index) => (
+                <React.Fragment key={`feed-slot-${index}`}>
+                  {renderFeedItem(item, index)}
+                  {index === 0 && recommendation && (
+                    <RecommendedStory story={recommendation} index={index} />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           )}
-
-          {recommendation && <RecommendedStory story={recommendation} index={feed.length} />}
         </main>
       </div>
     </div>
