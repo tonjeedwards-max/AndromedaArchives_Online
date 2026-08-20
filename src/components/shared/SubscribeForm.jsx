@@ -4,6 +4,7 @@ import { Mail, Sparkles, Loader2, CheckCircle2, AlertCircle } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireSupabase } from "@/api/supabaseClient";
+import { getReaderToken } from "@/lib/readerIdentity";
 
 export default function SubscribeForm() {
   const [email, setEmail] = useState("");
@@ -13,7 +14,10 @@ export default function SubscribeForm() {
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
       const { data, error } = await requireSupabase().functions.invoke("blog-subscribe", {
-        body: { email: email.trim() },
+        body: {
+          email: email.trim(),
+          reader_token: getReaderToken(),
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -21,9 +25,11 @@ export default function SubscribeForm() {
     },
     onSuccess: (data) => {
       setDone(true);
-      setMessage(data?.status === "already_subscribed"
-        ? "You're already subscribed to blog updates. ✨"
-        : "Check your inbox to confirm your subscription. ✨");
+      setMessage(
+        data?.status === "already_subscribed"
+          ? "You're already subscribed to blog updates. ✨"
+          : "Check your inbox to confirm your subscription. ✨"
+      );
     },
     onError: (error) => {
       setMessage(error?.message || "We couldn't start your subscription. Please try again.");
