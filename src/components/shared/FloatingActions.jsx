@@ -8,15 +8,13 @@ import { formatDistanceToNow } from "date-fns";
 import SearchPanel from "./SearchPanel";
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
+const SEEN_KEY = "andromeda-last-seen-updates";
 
 export default function FloatingActions() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [lastSeen, setLastSeen] = useState(() => {
-    const stored = sessionStorage.getItem("lastSeenUpdates");
-    if (stored) return Number(stored);
-    const now = Date.now();
-    sessionStorage.setItem("lastSeenUpdates", String(now));
-    return now;
+    const stored = localStorage.getItem(SEEN_KEY);
+    return stored ? Number(stored) : 0;
   });
   const [showTop, setShowTop] = useState(false);
 
@@ -75,11 +73,22 @@ export default function FloatingActions() {
   const storyMap = Object.fromEntries(stories.map((s) => [String(s.id), s]));
 
   const updates = [
-    ...posts.map((p) => ({ type: "blog", date: p.published_date || p.published_at || p.created_at, title: p.title, item: p })),
+    ...posts.map((p) => ({ type: "blog", date: p.published_at || p.published_date || p.created_at, title: p.title, item: p })),
     ...chapters.map((c) => ({ type: "chapter", date: c.created_at, title: c.title, item: c, story: storyMap[String(c.story_id)] || null })),
   ].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 8);
 
+  const newestUpdateTime = updates.reduce((max, u) => Math.max(max, new Date(u.date || 0).getTime()), 0);
   const unseenCount = updates.filter((u) => new Date(u.date || 0).getTime() > lastSeen).length;
+
+  const markUpdatesSeen = () => {
+    const seenAt = newestUpdateTime || Date.now();
+    localStorage.setItem(SEEN_KEY, String(seenAt));
+    setLastSeen(seenAt);
+  };
+
+  const togglePanel = () => {
+    setPanelOpen((open) => !open);
+  };
 
   return (
     <>
@@ -89,21 +98,21 @@ export default function FloatingActions() {
         </AnimatePresence>
         <SearchPanel />
         <div className="relative">
-          <button onClick={() => { if (!panelOpen) { const now = Date.now(); sessionStorage.setItem("lastSeenUpdates", String(now)); setLastSeen(now); } setPanelOpen(!panelOpen); }} className="relative w-12 h-12 rounded-full bg-card border border-primary/40 shadow-lg shadow-primary/20 flex items-center justify-center hover:border-primary/70 transition-all duration-300 hover:scale-105" aria-label="Latest updates">
+          <button onClick={togglePanel} className="relative w-12 h-12 rounded-full bg-card border border-primary/40 shadow-lg shadow-primary/20 flex items-center justify-center hover:border-primary/70 transition-all duration-300 hover:scale-105" aria-label="Latest updates">
             <Bell className="w-5 h-5 text-primary" />
             {unseenCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-accent text-accent-foreground text-[9px] font-bold flex items-center justify-center">{unseenCount}</span>}
           </button>
           <AnimatePresence>
-            {panelOpen && <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} transition={{ duration: 0.2 }} className="absolute bottom-16 right-0 w-80 bg-card/95 backdrop-blur-xl border border-border/60 rounded-xl shadow-2xl shadow-primary/10 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-border/40"><div className="flex items-center gap-2"><Bell className="w-4 h-4 text-accent" /><span className="font-heading text-sm font-semibold">Latest Updates</span></div><button onClick={() => setPanelOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button></div>
+            {panelOpen && <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} transition={{ duration: 0.2 }} onAnimationComplete={() => {}} className="absolute bottom-16 right-0 w-80 bg-card/95 backdrop-blur-xl border border-border/60 rounded-xl shadow-2xl shadow-primary/10 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border/40"><div className="flex items-center gap-2"><Bell className="w-4 h-4 text-accent" /><span className="font-heading text-sm font-semibold">Latest Updates</span></div><button onClick={() => { markUpdatesSeen(); setPanelOpen(false); }} className="text-muted-foreground hover:text-foreground" aria-label="Close notifications"><X className="w-4 h-4" /></button></div>
               <div className="max-h-96 overflow-y-auto">
                 {updates.length === 0 ? <p className="text-center text-muted-foreground text-sm py-8 font-light">Nothing yet...</p> : updates.map((u, i) => (
                   <motion.div key={`${u.type}-${u.item.id ?? u.item.blog_id}`} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
-                    {u.type === "chapter" ? <Link to={u.story?.story_code && Number.isInteger(Number(u.item.chapter_number)) ? `/story/${u.story.story_code}/chapter/${Number(u.item.chapter_number)}` : "/stories"} onClick={() => setPanelOpen(false)} className="flex items-start gap-3 px-4 py-3 hover:bg-primary/5 border-b border-border/20 transition-colors group">
+                    {u.type === "chapter" ? <Link to={u.story?.story_code && Number.isInteger(Number(u.item.chapter_number)) ? `/story/${u.story.story_code}/chapter/${Number(u.item.chapter_number)}` : "/stories"} onClick={() => { markUpdatesSeen(); setPanelOpen(false); }} className="flex items-start gap-3 px-4 py-3 hover:bg-primary/5 border-b border-border/20 transition-colors group">
                       <div className="mt-0.5 w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0"><BookOpen className="w-3.5 h-3.5 text-primary" /></div>
                       <div className="flex-1 min-w-0"><p className="text-[10px] uppercase tracking-wider text-primary font-semibold">New Chapter</p><p className="text-xs text-primary font-medium">{u.story?.title || "Story Update"}</p><p className="text-sm font-medium text-foreground/90 truncate group-hover:text-accent transition-colors">Ch. {u.item.chapter_number}: {u.title}</p><p className="text-[10px] text-muted-foreground mt-0.5">{u.date ? formatDistanceToNow(new Date(u.date), { addSuffix: true }) : "Recently"}</p></div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent mt-1 flex-shrink-0" />
-                    </Link> : <Link to={`/blog/${u.item.blog_id}`} onClick={() => setPanelOpen(false)} className="flex items-start gap-3 px-4 py-3 hover:bg-accent/5 border-b border-border/20 transition-colors group">
+                    </Link> : <Link to={`/blog/${u.item.blog_id}`} onClick={() => { markUpdatesSeen(); setPanelOpen(false); }} className="flex items-start gap-3 px-4 py-3 hover:bg-accent/5 border-b border-border/20 transition-colors group">
                       <div className="mt-0.5 w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0"><Newspaper className="w-3.5 h-3.5 text-accent" /></div>
                       <div className="flex-1 min-w-0"><p className="text-[10px] uppercase tracking-wider text-accent font-semibold">New Blog Post</p><p className="text-sm font-medium text-foreground/90 truncate group-hover:text-accent transition-colors">{u.title}</p><p className="text-[10px] text-muted-foreground mt-0.5">{u.date ? formatDistanceToNow(new Date(u.date), { addSuffix: true }) : "Recently"}</p></div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent mt-1 flex-shrink-0" />
