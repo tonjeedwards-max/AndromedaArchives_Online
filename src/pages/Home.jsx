@@ -16,7 +16,7 @@ export default function Home() {
   const { data: postsData } = useQuery({
     queryKey: ["home-blog-posts"],
     queryFn: async () => {
-      const { data, error } = await requireSupabase().from("blogs").select("*").eq("published", true).order("published_date", { ascending: false }).limit(20);
+      const { data, error } = await requireSupabase().from("blogs").select("*").eq("published", true).order("published_date", { ascending: false }).limit(10);
       if (error) throw error;
       return data || [];
     },
@@ -26,7 +26,7 @@ export default function Home() {
   const { data: chaptersData } = useQuery({
     queryKey: ["home-chapters"],
     queryFn: async () => {
-      const { data, error } = await requireSupabase().from("chapters").select("*").eq("published", true).order("created_at", { ascending: false }).limit(20);
+      const { data, error } = await requireSupabase().from("chapters").select("*").eq("published", true).order("created_at", { ascending: false }).limit(10);
       if (error) throw error;
       return data || [];
     },
@@ -52,7 +52,7 @@ export default function Home() {
   }, [stories]);
 
   const feed = useMemo(() => {
-    const blogItems = posts.map((p) => ({ type: "blog", date: p.published_date || p.published_at || p.created_at, data: p }));
+    const blogItems = posts.map((p) => ({ type: "blog", date: p.published_at || p.published_date || p.created_at, data: p }));
     const chapterItems = chapters.map((c) => ({
       type: "chapter",
       date: c.created_at,
@@ -62,7 +62,7 @@ export default function Home() {
 
     return [...blogItems, ...chapterItems]
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-      .slice(0, 8);
+      .slice(0, 5);
   }, [posts, chapters, storyMap]);
 
   const isLoading = postsData === undefined && chaptersData === undefined && storiesData === undefined;
@@ -70,15 +70,11 @@ export default function Home() {
 
   const feedItems = feed.map((item, i) =>
     item.type === "blog" ? (
-      <FeedPost key={`blog-${item.data.id}`} post={item.data} index={i} showReadMore={true} />
+      <FeedPost key={`blog-${item.data.blog_id}`} post={item.data} index={i} showReadMore={true} />
     ) : (
       <ChapterUpdateCard key={`chapter-${item.data.id}`} chapter={item.data} story={item.story} index={i} />
     )
   );
-
-  if (recommendation && feedItems.length >= 2) {
-    feedItems.splice(2, 0, <RecommendedStory key="recommendation" story={recommendation} index={2} />);
-  }
 
   return (
     <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 pt-8 pb-16">
@@ -116,6 +112,8 @@ export default function Home() {
           ) : (
             <div className="flex flex-col gap-6">{feedItems}</div>
           )}
+
+          {recommendation && <RecommendedStory story={recommendation} index={feed.length} />}
         </main>
       </div>
     </div>
