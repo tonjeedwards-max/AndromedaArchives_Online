@@ -26,34 +26,48 @@ export default function FloatingActions() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const { data: postsData } = useQuery({
+  const { data: postsData = [] } = useQuery({
     queryKey: ["updates-posts"],
     queryFn: async () => {
-      const { data, error } = await requireSupabase().from("blogs").select("id, title, published_date, published_at, created_at").eq("published", true).order("published_date", { ascending: false }).limit(5);
+      const { data, error } = await requireSupabase()
+        .from("blogs")
+        .select("blog_id, title, published_date, published_at, created_at")
+        .eq("published", true)
+        .order("published_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(5);
       if (error) throw error;
-      return data || [];
+      return asArray(data);
     },
     initialData: [],
   });
   const posts = asArray(postsData);
 
-  const { data: chaptersData } = useQuery({
+  const { data: chaptersData = [] } = useQuery({
     queryKey: ["updates-chapters"],
     queryFn: async () => {
-      const { data, error } = await requireSupabase().from("chapters").select("id, story_id, chapter_number, title, created_at").eq("published", true).order("created_at", { ascending: false }).limit(5);
+      const { data, error } = await requireSupabase()
+        .from("chapters")
+        .select("id, story_id, chapter_number, title, created_at")
+        .eq("published", true)
+        .order("created_at", { ascending: false })
+        .limit(5);
       if (error) throw error;
-      return data || [];
+      return asArray(data);
     },
     initialData: [],
   });
   const chapters = asArray(chaptersData);
 
-  const { data: storiesData } = useQuery({
+  const { data: storiesData = [] } = useQuery({
     queryKey: ["updates-stories"],
     queryFn: async () => {
-      const { data, error } = await requireSupabase().from("stories").select("id, story_code, title").eq("hidden", false);
+      const { data, error } = await requireSupabase()
+        .from("stories")
+        .select("id, story_code, title")
+        .eq("hidden", false);
       if (error) throw error;
-      return data || [];
+      return asArray(data);
     },
     initialData: [],
   });
@@ -84,12 +98,12 @@ export default function FloatingActions() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/40"><div className="flex items-center gap-2"><Bell className="w-4 h-4 text-accent" /><span className="font-heading text-sm font-semibold">Latest Updates</span></div><button onClick={() => setPanelOpen(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button></div>
               <div className="max-h-96 overflow-y-auto">
                 {updates.length === 0 ? <p className="text-center text-muted-foreground text-sm py-8 font-light">Nothing yet...</p> : updates.map((u, i) => (
-                  <motion.div key={`${u.type}-${u.item.id}`} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
+                  <motion.div key={`${u.type}-${u.item.id ?? u.item.blog_id}`} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
                     {u.type === "chapter" ? <Link to={u.story?.story_code && Number.isInteger(Number(u.item.chapter_number)) ? `/story/${u.story.story_code}/chapter/${Number(u.item.chapter_number)}` : "/stories"} onClick={() => setPanelOpen(false)} className="flex items-start gap-3 px-4 py-3 hover:bg-primary/5 border-b border-border/20 transition-colors group">
                       <div className="mt-0.5 w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0"><BookOpen className="w-3.5 h-3.5 text-primary" /></div>
                       <div className="flex-1 min-w-0"><p className="text-[10px] uppercase tracking-wider text-primary font-semibold">New Chapter</p><p className="text-xs text-primary font-medium">{u.story?.title || "Story Update"}</p><p className="text-sm font-medium text-foreground/90 truncate group-hover:text-accent transition-colors">Ch. {u.item.chapter_number}: {u.title}</p><p className="text-[10px] text-muted-foreground mt-0.5">{u.date ? formatDistanceToNow(new Date(u.date), { addSuffix: true }) : "Recently"}</p></div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent mt-1 flex-shrink-0" />
-                    </Link> : <Link to={`/blog/${u.item.id}`} onClick={() => setPanelOpen(false)} className="flex items-start gap-3 px-4 py-3 hover:bg-accent/5 border-b border-border/20 transition-colors group">
+                    </Link> : <Link to={`/blog/${u.item.blog_id}`} onClick={() => setPanelOpen(false)} className="flex items-start gap-3 px-4 py-3 hover:bg-accent/5 border-b border-border/20 transition-colors group">
                       <div className="mt-0.5 w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0"><Newspaper className="w-3.5 h-3.5 text-accent" /></div>
                       <div className="flex-1 min-w-0"><p className="text-[10px] uppercase tracking-wider text-accent font-semibold">New Blog Post</p><p className="text-sm font-medium text-foreground/90 truncate group-hover:text-accent transition-colors">{u.title}</p><p className="text-[10px] text-muted-foreground mt-0.5">{u.date ? formatDistanceToNow(new Date(u.date), { addSuffix: true }) : "Recently"}</p></div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:text-accent mt-1 flex-shrink-0" />
