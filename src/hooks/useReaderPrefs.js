@@ -24,7 +24,6 @@ export function getReadChapterKey(storyId, chapterNumber) {
 
 function normalizeReadChapters(prefs) {
   const read = { ...(prefs.readChapters || {}) };
-  // Migrate the previous per-chapter history entries into the read-chapter set.
   Object.values(prefs.history || {}).forEach((entry) => {
     if (!entry?.storyId) return;
     const chapterNumber = Number(entry.chapterNumber ?? entry.chapterId);
@@ -35,16 +34,45 @@ function normalizeReadChapters(prefs) {
   return read;
 }
 
+function normalizeHistory(prefs) {
+  const normalized = {};
+  Object.values(prefs.history || {}).forEach((entry) => {
+    if (!entry?.storyId) return;
+    const storyKey = getHistoryKey(entry.storyId);
+    if (!storyKey) return;
+    const chapterNumber = Number(entry.chapterNumber ?? entry.chapterId);
+    if (!Number.isInteger(chapterNumber)) return;
+
+    const existing = normalized[storyKey];
+    const existingChapter = Number(existing?.chapterNumber);
+    const isNewerChapter = !Number.isInteger(existingChapter) || chapterNumber > existingChapter;
+    const existingReadAt = existing?.readAt ? new Date(existing.readAt).getTime() : 0;
+    const entryReadAt = entry?.readAt ? new Date(entry.readAt).getTime() : 0;
+
+    if (!existing || isNewerChapter || entryReadAt > existingReadAt) {
+      normalized[storyKey] = {
+        ...existing,
+        ...entry,
+        historyKey: storyKey,
+        chapterNumber: isNewerChapter ? chapterNumber : existingChapter,
+      };
+    }
+  });
+  return normalized;
+}
+
+function normalizePrefs(prefs) {
+  const history = normalizeHistory(prefs);
+  const readChapters = normalizeReadChapters({ ...prefs, history });
+  return { ...prefs, history, readChapters };
+}
+
 export function useReaderPrefs() {
   const [prefs, setPrefs] = useState(() => {
     const initial = load();
-    const readChapters = normalizeReadChapters(initial);
-    if (Object.keys(readChapters).length !== Object.keys(initial.readChapters || {}).length) {
-      const migrated = { ...initial, readChapters };
-      save(migrated);
-      return migrated;
-    }
-    return initial;
+    const normalized = normalizePrefs(initial);
+    if (JSON.stringify(normalized) !== JSON.stringify(initial)) save(normalized);
+    return normalized;
   });
 
   const update = useCallback((updater) => {
@@ -58,36 +86,33 @@ export function useReaderPrefs() {
   const nightMode = prefs.nightMode ?? false;
   const setNightMode = (val) => update({ nightMode: val });
 
-  // History is one entry per story. Reading a newer chapter updates that story's
-  // entry to the furthest chapter reached; reading an older chapter never moves it backwards.
   const history = prefs.history || {};
   const addToHistory = useCallback((entry) => {
     update((prev) => {
       const chapterNumber = Number(entry.chapterNumber ?? entry.chapterId);
       const storyKey = getHistoryKey(entry.storyId);
+      if (!storyKey || !Number.isInteger(chapterNumber)) return prev;
+
       const existing = (prev.history || {})[storyKey] || {};
       const existingChapter = Number(existing.chapterNumber);
-      const latestChapter = Number.isInteger(existingChapter) && Number.isInteger(chapterNumber)
+      const latestChapter = Number.isInteger(existingChapter)
         ? Math.max(existingChapter, chapterNumber)
         : chapterNumber;
       const readChapters = normalizeReadChapters(prev);
-
-      if (entry.storyId && Number.isInteger(chapterNumber)) {
-        readChapters[getReadChapterKey(entry.storyId, chapterNumber)] = true;
-      }
+      readChapters[getReadChapterKey(storyKey, chapterNumber)] = true;
 
       const historyEntry = {
         ...existing,
         ...entry,
+        storyId: storyKey,
         chapterNumber: latestChapter,
         historyKey: storyKey,
         readAt: new Date().toISOString(),
       };
 
-      // Keep the timestamp tied to the latest chapter reached, while rereading an
-      // older chapter can still refresh the entry without changing its destination.
-      if (Number.isInteger(existingChapter) && Number.isInteger(chapterNumber) && chapterNumber < existingChapter) {
+      if (Number.isInteger(existingChapter) && chapterNumber < existingChapter) {
         historyEntry.chapterNumber = existingChapter;
+        historyEntry.title = existing.title;
       }
 
       return {
