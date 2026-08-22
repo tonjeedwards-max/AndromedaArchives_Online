@@ -87,7 +87,14 @@ export default function FloatingActions() {
   };
 
   const togglePanel = () => {
-    setPanelOpen((open) => !open);
+    setPanelOpen((open) => {
+      if (!open) {
+        // Opening the notification panel counts as checking the updates.
+        // Clear the badge immediately so it cannot remain stuck after the panel is viewed.
+        markUpdatesSeen();
+      }
+      return !open;
+    });
   };
 
   return (
@@ -103,7 +110,7 @@ export default function FloatingActions() {
             {unseenCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-accent text-accent-foreground text-[9px] font-bold flex items-center justify-center">{unseenCount}</span>}
           </button>
           <AnimatePresence>
-            {panelOpen && <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} transition={{ duration: 0.2 }} onAnimationComplete={() => {}} className="absolute bottom-16 right-0 w-80 bg-card/95 backdrop-blur-xl border border-border/60 rounded-xl shadow-2xl shadow-primary/10 overflow-hidden">
+            {panelOpen && <motion.div initial={{ opacity: 0, scale: 0.9, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 10 }} transition={{ duration: 0.2 }} className="absolute bottom-16 right-0 w-80 bg-card/95 backdrop-blur-xl border border-border/60 rounded-xl shadow-2xl shadow-primary/10 overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-border/40"><div className="flex items-center gap-2"><Bell className="w-4 h-4 text-accent" /><span className="font-heading text-sm font-semibold">Latest Updates</span></div><button onClick={() => { markUpdatesSeen(); setPanelOpen(false); }} className="text-muted-foreground hover:text-foreground" aria-label="Close notifications"><X className="w-4 h-4" /></button></div>
               <div className="max-h-96 overflow-y-auto">
                 {updates.length === 0 ? <p className="text-center text-muted-foreground text-sm py-8 font-light">Nothing yet...</p> : updates.map((u, i) => (
