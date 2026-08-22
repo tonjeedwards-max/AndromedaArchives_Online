@@ -10,7 +10,7 @@ export default function ContinueReadingCard() {
   if (entries.length === 0) return null;
 
   const latest = [...entries].sort((a, b) => new Date(b.readAt) - new Date(a.readAt))[0];
-  if (!latest?.chapterId) return null;
+  if (!latest?.storyId || !Number.isInteger(Number(latest.chapterNumber))) return null;
 
   return (
     <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
@@ -19,7 +19,7 @@ export default function ContinueReadingCard() {
         <h2 className="font-heading text-lg font-semibold tracking-tight">Continue Reading</h2>
       </div>
       <Link
-        to={`/story/${latest.storyId}/chapter/${latest.chapterId}`}
+        to={`/story/${latest.storyId}/chapter/${Number(latest.chapterNumber)}`}
         className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/30 hover:border-primary/50 transition-all group"
       >
         <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
@@ -28,7 +28,7 @@ export default function ContinueReadingCard() {
         <div className="flex-1 min-w-0">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Pick up where you left off</p>
           <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">{latest.storyTitle}</p>
-          <p className="text-xs text-muted-foreground truncate">{latest.title}</p>
+          <p className="text-xs text-muted-foreground truncate">Chapter {Number(latest.chapterNumber)}{latest.title ? ` · ${latest.title}` : ""}</p>
         </div>
         <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-accent transition-colors shrink-0" />
       </Link>
