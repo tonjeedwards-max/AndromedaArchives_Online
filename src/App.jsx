@@ -21,8 +21,9 @@ import Library from '@/pages/Library';
 import SearchPage from '@/pages/SearchPage';
 import AdminChapters from '@/pages/AdminChapters';
 import AdminContent from '@/pages/AdminContent';
+import AdminLore from '@/pages/AdminLore';
 
-export const ANDROMEDA_BUILD = 'supabase-reader-v3-2026-08-18';
+export const ANDROMEDA_BUILD = 'supabase-reader-v3-2026-08-23';
 if (typeof window !== 'undefined') console.info(`[Andromeda Archives] ${ANDROMEDA_BUILD}`);
 
 const publicSeo = {
@@ -56,7 +57,7 @@ function RouteSEO() {
   const location = useLocation();
   const basePath = Object.keys(publicSeo).find((path) => location.pathname === path) || null;
   const meta = basePath ? publicSeo[basePath] : null;
-  const privatePath = ['/library', '/admin/chapters', '/admin/content'];
+  const privatePath = ['/library', '/admin/chapters', '/admin/content', '/admin/lore'];
   const noindex = privatePath.some((path) => location.pathname === path || location.pathname.startsWith(`${path}/`));
 
   return <SEO
@@ -97,6 +98,7 @@ const AuthenticatedApp = () => {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/admin/chapters" element={<AdminChapters />} />
           <Route path="/admin/content" element={<AdminContent />} />
+          <Route path="/admin/lore" element={<AdminLore />} />
         </Route>
         <Route path="*" element={<PageNotFound />} />
       </Routes>
