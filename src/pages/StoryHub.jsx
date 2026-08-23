@@ -4,10 +4,11 @@ import { requireSupabase } from "@/api/supabaseClient";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, BookOpen, MessageCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen, BookMarked, MessageCircle, Loader2 } from "lucide-react";
 import ChapterList from "@/components/storyhub/ChapterList";
 import StoryCommentBox from "@/components/storyhub/StoryCommentBox";
 import StoryRating from "@/components/storyhub/StoryRating";
+import StoryLore from "@/components/storyhub/StoryLore";
 import { getStatusInfo } from "@/lib/storyStatus";
 import SEO from "@/components/SEO";
 
@@ -45,10 +46,29 @@ export default function StoryHub() {
     enabled: Boolean(story?.id),
   });
 
+  const { data: loreEntries = [], isLoading: loadingLore } = useQuery({
+    queryKey: ["story-lore", storyCode, story?.id],
+    queryFn: async () => {
+      if (!story?.id) return [];
+      const { data, error } = await supabase
+        .from("story_lore_entries")
+        .select("id, story_id, category, title, content, sort_order")
+        .eq("story_id", story.id)
+        .eq("published", true)
+        .order("category", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true });
+      if (error) throw error;
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: Boolean(story?.id),
+  });
+
   if (loadingStory) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
 
   const tags = asArray(story.tags);
+  const hasLore = loreEntries.length > 0;
   return (
     <>
       <SEO
@@ -86,11 +106,13 @@ export default function StoryHub() {
         </div>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
           <Tabs defaultValue="chapters" className="w-full">
-            <TabsList className="bg-card/60 border border-border/40 mb-6">
+            <TabsList className="bg-card/60 border border-border/40 mb-6 flex-wrap h-auto">
               <TabsTrigger value="chapters" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><BookOpen className="w-3.5 h-3.5" />Chapters ({chapters.length})</TabsTrigger>
+              {hasLore && <TabsTrigger value="lore" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><BookMarked className="w-3.5 h-3.5" />Lore</TabsTrigger>}
               <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><MessageCircle className="w-3.5 h-3.5" />Comments</TabsTrigger>
             </TabsList>
             <TabsContent value="chapters">{loadingChapters ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : chaptersError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the chapters right now. Please refresh and try again.</div> : <ChapterList chapters={chapters} storyCode={story.story_code} />}</TabsContent>
+            {hasLore && <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : <StoryLore entries={loreEntries} />}</TabsContent>}
             <TabsContent value="comments"><StoryCommentBox storyId={story.id} /></TabsContent>
           </Tabs>
         </div>
