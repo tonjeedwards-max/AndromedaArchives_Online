@@ -14,7 +14,7 @@ export default function Footer() {
               Subscribe to The Andromeda Archive
             </h3>
             <p className="text-sm text-muted-foreground font-light">
-              Confirm your email to get notified when new blog posts arrive.
+              Join the Starlings and get notified when new blog posts arrive.
             </p>
           </div>
           <SubscribeForm />
