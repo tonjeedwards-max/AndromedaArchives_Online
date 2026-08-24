@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { sanitizeChapterHtml } from "@/lib/htmlContent";
+import { sanitizeChapterHtml, wireChapterDefinitions } from "@/lib/htmlContent";
 
 function isHTML(content) {
   return /<\/?[a-z][^>]*>/i.test(content || "");
@@ -8,17 +8,21 @@ function isHTML(content) {
 
 export default function MediaContent({ content, media, renderers }) {
   const mediaItems = media?.filter(Boolean) || [];
+  const htmlContainerRef = useRef(null);
   const safeContent = React.useMemo(
     () => (isHTML(content) ? sanitizeChapterHtml(content) : content || ""),
     [content]
   );
 
-  // Uploaded chapter HTML is sanitized before rendering. Keep the wrapper
-  // class separate from the site's generic prose styles so the uploaded
-  // document gets predictable literary spacing inside the reader.
+  useEffect(() => {
+    if (!htmlContainerRef.current || !isHTML(content)) return undefined;
+    return wireChapterDefinitions(htmlContainerRef.current);
+  }, [content, safeContent]);
+
   if (isHTML(content) && mediaItems.length === 0) {
     return (
       <div
+        ref={htmlContainerRef}
         className="reader-html-content"
         dangerouslySetInnerHTML={{ __html: safeContent }}
       />
