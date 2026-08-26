@@ -46,11 +46,18 @@ export default function StoryHub() {
     enabled: Boolean(story?.id),
   });
 
-  // Fetch published lore independently, then match it to the current story in the browser.
-  const { data: allLoreEntries = [], isLoading: loadingLore, error: loreError } = useQuery({
-    queryKey: ["published-story-lore"],
+  const { data: loreEntries = [], isLoading: loadingLore, error: loreError } = useQuery({
+    queryKey: ["story-lore", storyCode, story?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("story_lore_entries").select("id, story_id, category, title, content, sort_order, published").eq("published", true).order("category", { ascending: true }).order("sort_order", { ascending: true }).order("id", { ascending: true });
+      if (!story?.id) return [];
+      const { data, error } = await supabase
+        .from("story_lore_entries")
+        .select("id, story_id, category, title, content, sort_order, published")
+        .eq("story_id", story.id)
+        .eq("published", true)
+        .order("category", { ascending: true })
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true });
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
@@ -58,17 +65,11 @@ export default function StoryHub() {
     retry: 2,
   });
 
-  const loreEntries = React.useMemo(() => {
-    if (!story?.id || !Array.isArray(allLoreEntries)) return [];
-    const storyId = Number(story.id);
-    return allLoreEntries.filter((entry) => Number(entry.story_id) === storyId);
-  }, [allLoreEntries, story?.id]);
-
   if (loadingStory) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
 
   const tags = asArray(story.tags);
-  const hasLore = loreEntries.length > 0;
+  const hasLore = Array.isArray(loreEntries) && loreEntries.length > 0;
   return (
     <>
       <SEO title={story.title} description={story.synopsis || `Read ${story.title}, an original story from The Andromeda Archive.`} path={`/story/${story.story_code}`} type="book" image={story.cover_image} breadcrumbs={[{ name: "Home", path: "/" }, { name: "Stories", path: "/stories" }, { name: story.title, path: `/story/${story.story_code}` }]} structuredData={{ "@type": "Book", name: story.title, description: story.synopsis || undefined, image: story.cover_image || undefined, genre: tags, url: `https://andromedaarchiveonline.netlify.app/story/${story.story_code}` }} />
