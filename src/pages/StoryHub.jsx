@@ -46,23 +46,23 @@ export default function StoryHub() {
     enabled: Boolean(story?.id),
   });
 
-  const { data: loreEntries = [], isLoading: loadingLore } = useQuery({
-    queryKey: ["story-lore", storyCode, story?.id],
+  // Fetch published lore independently, then match it to the current story in the browser.
+  const { data: allLoreEntries = [], isLoading: loadingLore, error: loreError } = useQuery({
+    queryKey: ["published-story-lore"],
     queryFn: async () => {
-      if (!story?.id) return [];
-      const { data, error } = await supabase
-        .from("story_lore_entries")
-        .select("id, story_id, category, title, content, sort_order")
-        .eq("story_id", story.id)
-        .eq("published", true)
-        .order("category", { ascending: true })
-        .order("sort_order", { ascending: true })
-        .order("id", { ascending: true });
+      const { data, error } = await supabase.from("story_lore_entries").select("id, story_id, category, title, content, sort_order, published").eq("published", true).order("category", { ascending: true }).order("sort_order", { ascending: true }).order("id", { ascending: true });
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
     enabled: Boolean(story?.id),
+    retry: 2,
   });
+
+  const loreEntries = React.useMemo(() => {
+    if (!story?.id || !Array.isArray(allLoreEntries)) return [];
+    const storyId = Number(story.id);
+    return allLoreEntries.filter((entry) => Number(entry.story_id) === storyId);
+  }, [allLoreEntries, story?.id]);
 
   if (loadingStory) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
@@ -71,32 +71,14 @@ export default function StoryHub() {
   const hasLore = loreEntries.length > 0;
   return (
     <>
-      <SEO
-        title={story.title}
-        description={story.synopsis || `Read ${story.title}, an original story from The Andromeda Archive.`}
-        path={`/story/${story.story_code}`}
-        type="book"
-        image={story.cover_image}
-        breadcrumbs={[{ name: "Home", path: "/" }, { name: "Stories", path: "/stories" }, { name: story.title, path: `/story/${story.story_code}` }]}
-        structuredData={{
-          "@type": "Book",
-          name: story.title,
-          description: story.synopsis || undefined,
-          image: story.cover_image || undefined,
-          genre: tags,
-          url: `https://andromedaarchiveonline.netlify.app/story/${story.story_code}`,
-        }}
-      />
+      <SEO title={story.title} description={story.synopsis || `Read ${story.title}, an original story from The Andromeda Archive.`} path={`/story/${story.story_code}`} type="book" image={story.cover_image} breadcrumbs={[{ name: "Home", path: "/" }, { name: "Stories", path: "/stories" }, { name: story.title, path: `/story/${story.story_code}` }]} structuredData={{ "@type": "Book", name: story.title, description: story.synopsis || undefined, image: story.cover_image || undefined, genre: tags, url: `https://andromedaarchiveonline.netlify.app/story/${story.story_code}` }} />
       <div className="relative z-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-4">
           <Link to="/stories" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"><ArrowLeft className="w-4 h-4" />Back to Catalogue</Link>
           <div className="flex flex-col md:flex-row gap-8">
             {story.cover_image && <div className="w-40 md:w-48 shrink-0 mx-auto md:mx-0"><div className="aspect-[2/3] rounded-lg overflow-hidden shadow-xl shadow-primary/15 ring-1 ring-border/40 relative"><img src={story.cover_image} alt={story.title} className="w-full h-full object-cover" /><div className="absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b from-accent/60 via-primary/40 to-accent/60" /></div></div>}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 flex-wrap mb-2">
-                {story.status && <Badge variant="outline" className={`text-xs border ${getStatusInfo(story.status).badgeClass}`}>{getStatusInfo(story.status).label}</Badge>}
-                {tags.slice().sort((a, b) => String(a).localeCompare(String(b))).slice(0, 3).map((tag) => <Badge key={tag} variant="outline" className="text-xs border-accent/30 text-accent capitalize">{tag}</Badge>)}
-              </div>
+              <div className="flex items-center gap-3 flex-wrap mb-2">{story.status && <Badge variant="outline" className={`text-xs border ${getStatusInfo(story.status).badgeClass}`}>{getStatusInfo(story.status).label}</Badge>}{tags.slice().sort((a, b) => String(a).localeCompare(String(b))).slice(0, 3).map((tag) => <Badge key={tag} variant="outline" className="text-xs border-accent/30 text-accent capitalize">{tag}</Badge>)}</div>
               <h1 className="font-heading text-3xl md:text-4xl font-semibold tracking-tight mb-4">{story.title}</h1>
               {story.synopsis && <p className="text-foreground/70 leading-relaxed font-light max-w-2xl">{story.synopsis}</p>}
               <div className="flex items-center gap-4 mt-5 text-sm text-muted-foreground"><span className="flex items-center gap-1"><BookOpen className="w-4 h-4" />{chapters.length} published chapter{chapters.length !== 1 ? "s" : ""}</span></div>
@@ -112,7 +94,7 @@ export default function StoryHub() {
               <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><MessageCircle className="w-3.5 h-3.5" />Comments</TabsTrigger>
             </TabsList>
             <TabsContent value="chapters">{loadingChapters ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : chaptersError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the chapters right now. Please refresh and try again.</div> : <ChapterList chapters={chapters} storyCode={story.story_code} />}</TabsContent>
-            {hasLore && <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : <StoryLore entries={loreEntries} />}</TabsContent>}
+            {hasLore && <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : loreError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the story lore right now. Please refresh and try again.</div> : <StoryLore entries={loreEntries} />}</TabsContent>}
             <TabsContent value="comments"><StoryCommentBox storyId={story.id} /></TabsContent>
           </Tabs>
         </div>
