@@ -1,5 +1,6 @@
 import React from "react";
 import { BookMarked, ChevronDown } from "lucide-react";
+import { sanitizeChapterHtml } from "@/lib/htmlContent";
 
 const asArray = (value) => {
   if (Array.isArray(value)) return value;
@@ -56,7 +57,10 @@ export default function StoryLore({ entries = [] }) {
                   <span>{entry.title}</span>
                   <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
                 </summary>
-                <div className="border-t border-border/30 px-4 py-4 prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: entry.content }} />
+                <div
+                  className="border-t border-border/30 px-4 py-4 prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: sanitizeChapterHtml(entry.content || "") }}
+                />
               </details>
             ))}
           </div>
