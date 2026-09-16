@@ -69,7 +69,6 @@ export default function StoryHub() {
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
 
   const tags = asArray(story.tags);
-  const hasLore = Array.isArray(loreEntries) && loreEntries.length > 0;
   return (
     <>
       <SEO title={story.title} description={story.synopsis || `Read ${story.title}, an original story from The Andromeda Archive.`} path={`/story/${story.story_code}`} type="book" image={story.cover_image} breadcrumbs={[{ name: "Home", path: "/" }, { name: "Stories", path: "/stories" }, { name: story.title, path: `/story/${story.story_code}` }]} structuredData={{ "@type": "Book", name: story.title, description: story.synopsis || undefined, image: story.cover_image || undefined, genre: tags, url: `https://andromedaarchiveonline.netlify.app/story/${story.story_code}` }} />
@@ -91,11 +90,11 @@ export default function StoryHub() {
           <Tabs defaultValue="chapters" className="w-full">
             <TabsList className="bg-card/60 border border-border/40 mb-6 flex-wrap h-auto">
               <TabsTrigger value="chapters" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><BookOpen className="w-3.5 h-3.5" />Chapters ({chapters.length})</TabsTrigger>
-              {hasLore && <TabsTrigger value="lore" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><BookMarked className="w-3.5 h-3.5" />Lore</TabsTrigger>}
+              <TabsTrigger value="lore" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><BookMarked className="w-3.5 h-3.5" />Lore</TabsTrigger>
               <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><MessageCircle className="w-3.5 h-3.5" />Comments</TabsTrigger>
             </TabsList>
             <TabsContent value="chapters">{loadingChapters ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : chaptersError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the chapters right now. Please refresh and try again.</div> : <ChapterList chapters={chapters} storyCode={story.story_code} />}</TabsContent>
-            {hasLore && <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : loreError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the story lore right now. Please refresh and try again.</div> : <StoryLore entries={loreEntries} />}</TabsContent>}
+            <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : loreError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the story lore right now. Please refresh and try again.</div> : <StoryLore entries={loreEntries} />}</TabsContent>
             <TabsContent value="comments"><StoryCommentBox storyId={story.id} /></TabsContent>
           </Tabs>
         </div>
