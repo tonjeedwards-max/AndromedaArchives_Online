@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Mail, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { claimReaderUsername, getSavedUsername } from "@/lib/readerIdentity";
+import { requireSupabase } from "@/api/supabaseClient";
+import { claimReaderUsername, getReaderToken, getSavedUsername } from "@/lib/readerIdentity";
 
 export default function SubscribeForm() {
   const [email, setEmail] = useState("");
@@ -29,18 +30,19 @@ export default function SubscribeForm() {
         await claimReaderUsername(trimmedUsername);
       }
 
-      const response = await fetch("/.netlify/functions/beehiiv-subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const { data, error: functionError } = await requireSupabase().functions.invoke("blog-subscribe", {
+        body: {
           email: trimmedEmail,
-          username: trimmedUsername,
-        }),
+          reader_token: getReaderToken(),
+        },
       });
 
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || data?.error) {
-        throw new Error(data?.error || "Couldn't start the subscription. Please try again.");
+      if (functionError) {
+        throw new Error(data?.error || functionError.message || "Couldn't start the subscription. Please try again.");
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
       }
 
       setDone(true);
