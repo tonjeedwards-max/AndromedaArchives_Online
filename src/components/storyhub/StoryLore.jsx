@@ -1,5 +1,5 @@
-import React from "react";
-import { BookMarked, ChevronDown, ExternalLink } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { BookMarked, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
 import { sanitizeChapterHtml } from "@/lib/htmlContent";
 
 const isHttpUrl = (value) => {
@@ -11,18 +11,55 @@ const isHttpUrl = (value) => {
   }
 };
 
-const asArray = (value) => {
-  if (Array.isArray(value)) return value;
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
+function RemoteLore({ url, title }) {
+  const [html, setHtml] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setFailed(false);
+      setHtml("");
+      try {
+        const response = await fetch(url, { headers: { Accept: "text/html" } });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const source = await response.text();
+        const document = new DOMParser().parseFromString(source, "text/html");
+        const content = document.body?.innerHTML?.trim() || source;
+        if (!content) throw new Error("Empty lore document");
+        if (!cancelled) setHtml(sanitizeChapterHtml(content));
+      } catch (error) {
+        console.error("Failed to load remote lore", error);
+        if (!cancelled) setFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+
+    load();
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (loading) {
+    return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>;
   }
-  return [];
-};
+
+  if (failed) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">The reference page could not be embedded here.</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-accent hover:underline text-sm">
+          Open {title || "lore reference"} <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+      </div>
+    );
+  }
+
+  return <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: html }} />;
+}
 
 export default function StoryLore({ entries = [] }) {
   const grouped = entries.reduce((groups, entry) => {
@@ -64,26 +101,9 @@ export default function StoryLore({ entries = [] }) {
                   </summary>
                   <div className="border-t border-border/30 px-4 py-4">
                     {externalReference ? (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                          <span>Reference page</span>
-                          <a href={content} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
-                            Open separately <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
-                        <iframe
-                          src={content}
-                          title={entry.title || "Lore reference"}
-                          className="w-full min-h-[70vh] rounded-lg border border-border/40 bg-background"
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
+                      <RemoteLore url={content} title={entry.title} />
                     ) : (
-                      <div
-                        className="prose prose-sm dark:prose-invert max-w-none"
-                        dangerouslySetInnerHTML={{ __html: sanitizeChapterHtml(content) }}
-                      />
+                      <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeChapterHtml(content) }} />
                     )}
                   </div>
                 </details>
