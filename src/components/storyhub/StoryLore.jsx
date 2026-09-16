@@ -1,6 +1,15 @@
 import React from "react";
-import { BookMarked, ChevronDown } from "lucide-react";
+import { BookMarked, ChevronDown, ExternalLink } from "lucide-react";
 import { sanitizeChapterHtml } from "@/lib/htmlContent";
+
+const isHttpUrl = (value) => {
+  try {
+    const url = new URL(String(value || "").trim());
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+};
 
 const asArray = (value) => {
   if (Array.isArray(value)) return value;
@@ -25,15 +34,7 @@ export default function StoryLore({ entries = [] }) {
 
   const categories = Object.entries(grouped);
 
-  if (!categories.length) {
-    return (
-      <div className="rounded-xl border border-border/40 bg-card/40 p-8 text-center">
-        <BookMarked className="mx-auto w-8 h-8 text-accent/70 mb-3" />
-        <p className="font-medium">The lore archive is still being written.</p>
-        <p className="text-sm text-muted-foreground mt-1">Check back later for worldbuilding notes, glossaries, and other story secrets.</p>
-      </div>
-    );
-  }
+  if (!categories.length) return null;
 
   return (
     <div className="space-y-6">
@@ -51,18 +52,43 @@ export default function StoryLore({ entries = [] }) {
         <section key={category} className="space-y-3">
           <h3 className="font-heading text-xl font-semibold">{category}</h3>
           <div className="space-y-2">
-            {categoryEntries.map((entry, index) => (
-              <details key={entry.id} className="group rounded-lg border border-border/40 bg-card/50 overflow-hidden" open={index === 0 && categoryEntries.length === 1}>
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 font-medium [&::-webkit-details-marker]:hidden">
-                  <span>{entry.title}</span>
-                  <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
-                </summary>
-                <div
-                  className="border-t border-border/30 px-4 py-4 prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizeChapterHtml(entry.content || "") }}
-                />
-              </details>
-            ))}
+            {categoryEntries.map((entry, index) => {
+              const content = String(entry.content || "").trim();
+              const externalReference = isHttpUrl(content);
+
+              return (
+                <details key={entry.id} className="group rounded-lg border border-border/40 bg-card/50 overflow-hidden" open={index === 0 && categoryEntries.length === 1}>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 font-medium [&::-webkit-details-marker]:hidden">
+                    <span>{entry.title}</span>
+                    <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="border-t border-border/30 px-4 py-4">
+                    {externalReference ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                          <span>Reference page</span>
+                          <a href={content} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent hover:underline">
+                            Open separately <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                        <iframe
+                          src={content}
+                          title={entry.title || "Lore reference"}
+                          className="w-full min-h-[70vh] rounded-lg border border-border/40 bg-background"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ) : (
+                      <div
+                        className="prose prose-sm dark:prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ __html: sanitizeChapterHtml(content) }}
+                      />
+                    )}
+                  </div>
+                </details>
+              );
+            })}
           </div>
         </section>
       ))}
