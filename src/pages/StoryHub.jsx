@@ -68,7 +68,9 @@ export default function StoryHub() {
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
 
   const tags = asArray(story.tags);
-  const hasLore = !loadingLore && !loreError && loreEntries.length > 0;
+  // A published lore row is the source of truth for whether this story has Lore.
+  // Query errors should not make an existing Lore tab disappear once data is available.
+  const hasLore = loreEntries.length > 0;
 
   return (
     <>
