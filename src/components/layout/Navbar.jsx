@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Sparkles, Sun, Moon, ChevronDown } from "lucide-react";
+import { Menu, X, Sparkles, Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import SubscribeForm from "@/components/shared/SubscribeForm";
@@ -29,12 +29,10 @@ const collectiveLinks = [
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileExploreOpen, setMobileExploreOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const location = useLocation();
   const { resolvedTheme, setTheme } = useTheme();
   const hideNav = location.pathname === "/" || location.pathname === "/blog";
-  const collectiveActive = collectiveLinks.some((link) => location.pathname === link.path);
 
   useEffect(() => setMounted(true), []);
 
@@ -152,10 +150,7 @@ export default function Navbar() {
           </button>
 
           <button
-            onClick={() => {
-              setMobileOpen(!mobileOpen);
-              if (mobileOpen) setMobileExploreOpen(false);
-            }}
+            onClick={() => setMobileOpen(!mobileOpen)}
             className="lg:hidden text-foreground/80 hover:text-foreground"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
@@ -173,56 +168,7 @@ export default function Navbar() {
             exit={{ opacity: 0, height: 0 }}
             className="lg:hidden border-t border-border/40 bg-background/95 backdrop-blur-xl"
           >
-            <div className="px-6 py-5 space-y-5">
-              <div>
-                <button
-                  type="button"
-                  onClick={() => setMobileExploreOpen((open) => !open)}
-                  className={`w-full flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium uppercase tracking-wider transition-colors ${
-                    collectiveActive || mobileExploreOpen
-                      ? "text-accent bg-accent/10"
-                      : "text-foreground/80 hover:text-accent hover:bg-accent/10"
-                  }`}
-                  aria-expanded={mobileExploreOpen}
-                >
-                  <span>Explore</span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${mobileExploreOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                <AnimatePresence initial={false}>
-                  {mobileExploreOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="mt-2 ml-3 border-l border-border/40 pl-3 space-y-1">
-                        {collectiveLinks.map((link) => (
-                          <Link
-                            key={link.path}
-                            to={link.path}
-                            onClick={() => setMobileOpen(false)}
-                            className={`block rounded-lg px-4 py-2.5 text-sm transition-colors ${
-                              location.pathname === link.path
-                                ? "text-accent bg-accent/10"
-                                : "text-foreground/70 hover:text-accent hover:bg-accent/10"
-                            }`}
-                          >
-                            <span className="font-medium">{link.label}</span>
-                            <span className="block mt-0.5 text-xs text-muted-foreground">
-                              {link.description}
-                            </span>
-                          </Link>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
+            <div className="px-6 py-5">
               <div className="border-t border-border/30 pt-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium mb-3">
                   Stay connected
