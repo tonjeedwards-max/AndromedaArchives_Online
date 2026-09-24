@@ -19,6 +19,8 @@ import BlogPostDetail from '@/pages/BlogPostDetail';
 import About from '@/pages/About';
 import Library from '@/pages/Library';
 import SearchPage from '@/pages/SearchPage';
+import Podcasts from '@/pages/Podcasts';
+import PodcastDetail from '@/pages/PodcastDetail';
 import AdminChapters from '@/pages/AdminChapters';
 import AdminContent from '@/pages/AdminContent';
 import AdminLore from '@/pages/AdminLore';
@@ -34,6 +36,10 @@ const publicSeo = {
   '/stories': {
     title: 'Stories | Original Fiction Catalogue',
     description: 'Browse the Andromeda Archive catalogue of original novels, novellas, and short stories across romance, fantasy, sci-fi, paranormal, crime, horror, and contemporary fiction.',
+  },
+  '/podcasts': {
+    title: 'Podcasts | Starlight Radio',
+    description: 'Listen to podcast episodes from The Andromeda Archive, covering writing, worldbuilding, literary commentary, and the worlds behind the stories.',
   },
   '/blog': {
     title: 'Blog | Behind the Ink & Worldbuilding',
@@ -90,6 +96,8 @@ const AuthenticatedApp = () => {
           <Route path="/stories" element={<Stories />} />
           <Route path="/story/:storyCode" element={<StoryHub />} />
           <Route path="/story/:storyCode/chapter/:chapterId" element={<ChapterReader />} />
+          <Route path="/podcasts" element={<Podcasts />} />
+          <Route path="/podcasts/:episodeId" element={<PodcastDetail />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/blog" element={<Blog />} />
           <Route path="/blog/:blogId" element={<BlogPostDetail />} />
