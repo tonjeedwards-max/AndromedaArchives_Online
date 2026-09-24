@@ -8,6 +8,7 @@ import SubscribeForm from "@/components/shared/SubscribeForm";
 const navLinks = [
   { path: "/", label: "Home" },
   { path: "/stories", label: "Stories" },
+  { path: "/podcasts", label: "Podcasts" },
   { path: "/library", label: "Library" },
   { path: "/blog", label: "Blog" },
   { path: "/about", label: "About" },
@@ -36,7 +37,7 @@ export default function Navbar() {
   return <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-background/70 border-b border-border/40">
     <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       <Link to="/" className="flex items-center gap-2 group"><Sparkles className="w-5 h-5 text-accent transition-transform group-hover:rotate-12 shrink-0" /><span className="font-display text-lg sm:text-xl md:text-2xl font-semibold tracking-wide text-shimmer">The Andromeda Archive</span></Link>
-      {!hideNav && <div className="hidden lg:flex items-center gap-4 lg:gap-8">{navLinks.map((link) => <Link key={link.path} to={link.path} className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 ${location.pathname === link.path ? "text-accent" : "text-foreground/70 hover:text-foreground"}`}>{link.label}</Link>)}</div>}
+      {!hideNav && <div className="hidden lg:flex items-center gap-4 lg:gap-7">{navLinks.map((link) => <Link key={link.path} to={link.path} className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 ${location.pathname === link.path ? "text-accent" : "text-foreground/70 hover:text-foreground"}`}>{link.label}</Link>)}</div>}
       <button onClick={toggleTheme} className="text-foreground/70 hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-muted" title={isDark ? "Switch to light mode" : "Switch to dark mode"} aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}>{isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}</button>
       <button onClick={() => setMobileOpen(!mobileOpen)} className="lg:hidden text-foreground/80 hover:text-foreground" aria-label="Open menu">{mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}</button>
     </div>
