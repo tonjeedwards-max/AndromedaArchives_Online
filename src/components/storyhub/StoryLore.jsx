@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BookMarked, ChevronDown, ExternalLink, Loader2 } from "lucide-react";
 import { sanitizeChapterHtml } from "@/lib/htmlContent";
+import { requireSupabase } from "@/api/supabaseClient";
 
 const isHttpUrl = (value) => {
   try {
@@ -24,9 +25,10 @@ function RemoteLore({ url, title }) {
       setFailed(false);
       setHtml("");
       try {
-        const response = await fetch(url, { headers: { Accept: "text/html" } });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const source = await response.text();
+        const { data, error } = await requireSupabase().functions.invoke("lore-proxy", { body: { url } });
+        if (error) throw error;
+        const source = data?.html;
+        if (!source) throw new Error(data?.error || "Empty lore document");
         const document = new DOMParser().parseFromString(source, "text/html");
         const content = document.body?.innerHTML?.trim() || source;
         if (!content) throw new Error("Empty lore document");
