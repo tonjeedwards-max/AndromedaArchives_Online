@@ -11,6 +11,16 @@ export default function SubscribeForm() {
 
     container.innerHTML = "";
 
+    const observer = new MutationObserver(() => {
+      container.querySelectorAll("iframe").forEach((iframe) => {
+        if (!iframe.getAttribute("title")) {
+          iframe.setAttribute("title", "Email subscription form");
+        }
+      });
+    });
+
+    observer.observe(container, { childList: true, subtree: true });
+
     const script = document.createElement("script");
     script.async = true;
     script.src = "https://subscribe-forms.beehiiv.com/v3/loader.js";
@@ -19,6 +29,7 @@ export default function SubscribeForm() {
     container.appendChild(script);
 
     return () => {
+      observer.disconnect();
       if (container) container.innerHTML = "";
     };
   }, []);
@@ -26,8 +37,9 @@ export default function SubscribeForm() {
   return (
     <div
       ref={containerRef}
-      className="w-full max-w-md min-h-[80px]"
+      role="group"
       aria-label="Subscribe to The Andromeda Archive"
+      className="w-full max-w-md min-h-[80px]"
     />
   );
 }
