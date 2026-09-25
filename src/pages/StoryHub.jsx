@@ -46,6 +46,23 @@ export default function StoryHub() {
     enabled: Boolean(story?.id),
   });
 
+  const { data: hasLore = false } = useQuery({
+    queryKey: ["story-lore-exists", storyCode, story?.id],
+    queryFn: async () => {
+      if (!story?.id) return false;
+      const { data, error } = await supabase
+        .from("story_lore_entries")
+        .select("id")
+        .eq("story_id", story.id)
+        .eq("published", true)
+        .limit(1);
+      if (error) throw error;
+      return Array.isArray(data) && data.length > 0;
+    },
+    enabled: Boolean(story?.id),
+    retry: 2,
+  });
+
   const { data: loreEntries = [], isLoading: loadingLore, error: loreError } = useQuery({
     queryKey: ["story-lore", storyCode, story?.id],
     queryFn: async () => {
@@ -60,7 +77,7 @@ export default function StoryHub() {
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
-    enabled: Boolean(story?.id),
+    enabled: Boolean(story?.id) && hasLore,
     retry: 2,
   });
 
@@ -68,9 +85,6 @@ export default function StoryHub() {
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
 
   const tags = asArray(story.tags);
-  // A published lore row is the source of truth for whether this story has Lore.
-  // Query errors should not make an existing Lore tab disappear once data is available.
-  const hasLore = loreEntries.length > 0;
 
   return (
     <>
@@ -97,7 +111,7 @@ export default function StoryHub() {
               <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><MessageCircle className="w-3.5 h-3.5" />Comments</TabsTrigger>
             </TabsList>
             <TabsContent value="chapters">{loadingChapters ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : chaptersError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the chapters right now. Please refresh and try again.</div> : <ChapterList chapters={chapters} storyCode={story.story_code} />}</TabsContent>
-            {hasLore && <TabsContent value="lore"><StoryLore entries={loreEntries} /></TabsContent>}
+            {hasLore && <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : loreError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the lore right now. Please refresh and try again.</div> : <StoryLore entries={loreEntries} />}</TabsContent>}
             <TabsContent value="comments"><StoryCommentBox storyId={story.id} /></TabsContent>
           </Tabs>
         </div>
