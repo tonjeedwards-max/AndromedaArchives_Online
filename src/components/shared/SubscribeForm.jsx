@@ -3,7 +3,7 @@ import { Mail, Sparkles, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { requireSupabase } from "@/api/supabaseClient";
-import { claimReaderUsername, getReaderToken, getSavedUsername } from "@/lib/readerIdentity";
+import { getReaderToken, getSavedUsername, saveUsername } from "@/lib/readerIdentity";
 
 export default function SubscribeForm() {
   const [email, setEmail] = useState("");
@@ -25,14 +25,10 @@ export default function SubscribeForm() {
 
     setIsPending(true);
     try {
-      const saved = getSavedUsername();
-      if (!saved || saved !== trimmedUsername) {
-        await claimReaderUsername(trimmedUsername);
-      }
-
       const { data, error: functionError } = await requireSupabase().functions.invoke("blog-subscribe", {
         body: {
           email: trimmedEmail,
+          username: trimmedUsername,
           reader_token: getReaderToken(),
         },
       });
@@ -45,6 +41,7 @@ export default function SubscribeForm() {
         throw new Error(data.error);
       }
 
+      saveUsername(trimmedUsername);
       setDone(true);
       setEmail("");
     } catch (err) {
