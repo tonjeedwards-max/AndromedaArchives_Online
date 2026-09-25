@@ -20,6 +20,7 @@ import About from '@/pages/About';
 import Library from '@/pages/Library';
 import SearchPage from '@/pages/SearchPage';
 import Podcasts from '@/pages/Podcasts';
+import Gallery from '@/pages/Gallery';
 import PodcastDetail from '@/pages/PodcastDetail';
 import AdminChapters from '@/pages/AdminChapters';
 import AdminContent from '@/pages/AdminContent';
@@ -36,6 +37,10 @@ const publicSeo = {
   '/stories': {
     title: 'Stories | Original Fiction Catalogue',
     description: 'Browse the Andromeda Archive catalogue of original novels, novellas, and short stories across romance, fantasy, sci-fi, paranormal, crime, horror, and contemporary fiction.',
+  },
+  '/gallery': {
+    title: 'Gallery | Archive Artwork',
+    description: 'Explore drawings, character designs, concept art, illustrations, and other artwork from The Andromeda Archive.',
   },
   '/podcasts': {
     title: 'Podcasts | Starlight Radio',
@@ -97,6 +102,7 @@ const AuthenticatedApp = () => {
           <Route path="/story/:storyCode" element={<StoryHub />} />
           <Route path="/story/:storyCode/chapter/:chapterId" element={<ChapterReader />} />
           <Route path="/podcasts" element={<Podcasts />} />
+          <Route path="/gallery" element={<Gallery />} />
           <Route path="/podcasts/:episodeId" element={<PodcastDetail />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/blog" element={<Blog />} />
