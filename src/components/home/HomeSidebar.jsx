@@ -5,9 +5,9 @@ import {
   Home as HomeIcon,
   BookOpen,
   Library,
-  FolderOpen,
   FileText,
   Image,
+  LayoutGrid,
   Mic2,
   Mail,
   Info,
@@ -78,7 +78,7 @@ export default function HomeSidebar() {
             }`}
           >
             <span className="flex items-center gap-3">
-              <FolderOpen className="w-4 h-4" />
+              <LayoutGrid className="w-4 h-4" />
               Explore
             </span>
             <ChevronDown
