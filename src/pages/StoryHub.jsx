@@ -46,23 +46,6 @@ export default function StoryHub() {
     enabled: Boolean(story?.id),
   });
 
-  const { data: hasLore = false } = useQuery({
-    queryKey: ["story-lore-exists", storyCode, story?.id],
-    queryFn: async () => {
-      if (!story?.id) return false;
-      const { data, error } = await supabase
-        .from("story_lore_entries")
-        .select("id")
-        .eq("story_id", story.id)
-        .eq("published", true)
-        .limit(1);
-      if (error) throw error;
-      return Array.isArray(data) && data.length > 0;
-    },
-    enabled: Boolean(story?.id),
-    retry: 2,
-  });
-
   const { data: loreEntries = [], isLoading: loadingLore, error: loreError } = useQuery({
     queryKey: ["story-lore", storyCode, story?.id],
     queryFn: async () => {
@@ -77,9 +60,11 @@ export default function StoryHub() {
       if (error) throw error;
       return Array.isArray(data) ? data : [];
     },
-    enabled: Boolean(story?.id) && hasLore,
+    enabled: Boolean(story?.id),
     retry: 2,
   });
+
+  const hasLore = loreEntries.length > 0;
 
   if (loadingStory) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
