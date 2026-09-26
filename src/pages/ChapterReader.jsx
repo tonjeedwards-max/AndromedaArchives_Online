@@ -28,7 +28,33 @@ export default function ChapterReader() {
   const { data: story, isLoading: loadingStory } = useQuery({ queryKey: ["story-reader", storyCode], queryFn: async () => { const { data, error } = await requireSupabase().from("stories").select("*").eq("story_code", storyCode).eq("hidden", false).maybeSingle(); if (error) throw error; return data; }, enabled: Boolean(storyCode) });
   const { data: chapter, isLoading: loadingChapter, error: chapterError } = useQuery({ queryKey: ["chapter-reader", storyCode, chapterNumber, story?.id], queryFn: async () => { if (!story?.id || !Number.isInteger(chapterNumber)) return null; const { data, error } = await requireSupabase().from("chapters").select("id, story_id, chapter_number, title, content, media, word_count, published").eq("story_id", story.id).eq("chapter_number", chapterNumber).eq("published", true).maybeSingle(); if (error) throw error; return data; }, enabled: Boolean(story?.id) && Number.isInteger(chapterNumber) });
   const { data: allChapters = [] } = useQuery({ queryKey: ["story-reader-chapters", storyCode, story?.id], queryFn: async () => { if (!story?.id) return []; const { data, error } = await requireSupabase().from("chapters").select("id, chapter_number, title, published").eq("story_id", story.id).eq("published", true).order("chapter_number", { ascending: true }); if (error) throw error; return Array.isArray(data) ? data : []; }, enabled: Boolean(story?.id) });
-  useEffect(() => {\n    if (!chapter?.content || !/^https?:\\/\\//.test(chapter.content)) {\n      setFetchedContent(null);\n      return;\n    }\n    let cancelled = false;\n    const loadContent = async () => {\n      try {\n        const { data, error } = await requireSupabase().functions.invoke("chapter-proxy", {\n          body: { url: chapter.content },\n        });\n        if (error || !data?.html) throw new Error("content_fetch_failed");\n        if (!cancelled) setFetchedContent(data.html);\n      } catch {\n        if (!cancelled) setFetchedContent(null);\n      }\n    };\n    loadContent();\n    return () => { cancelled = true; };\n  }, [chapter?.content]);
+  useEffect(() => {
+    if (!chapter?.content || !/^https?:\/\//.test(chapter.content)) {
+      setFetchedContent(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadContent = async () => {
+      try {
+        const { data, error } = await requireSupabase().functions.invoke("chapter-proxy", {
+          body: { url: chapter.content },
+        });
+
+        if (error || !data?.html) throw new Error("content_fetch_failed");
+        if (!cancelled) setFetchedContent(data.html);
+      } catch {
+        if (!cancelled) setFetchedContent(null);
+      }
+    };
+
+    loadContent();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [chapter?.content]);
   const displayContent = fetchedContent ?? chapter?.content ?? "";
   const currentIndex = useMemo(() => allChapters.findIndex((item) => Number(item.chapter_number) === chapterNumber), [allChapters, chapterNumber]);
   const previousChapter = currentIndex > 0 ? allChapters[currentIndex - 1] : null;
