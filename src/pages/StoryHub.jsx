@@ -12,7 +12,7 @@ import StoryLore from "@/components/storyhub/StoryLore";
 import { getStatusInfo } from "@/lib/storyStatus";
 import SEO from "@/components/SEO";
 
-const asArray = (value) => {
+const FB1_LORE_FALLBACK = {\n  id: "fb1-glossary",\n  story_id: 1,\n  category: "Glossary",\n  title: "Frost & Bloom Glossary",\n  content: "https://tajelliebby.github.io/x7f9-story-assets/FB1/Glossary.html",\n  published: true,\n};\n\nconst asArray = (value) => {
   if (Array.isArray(value)) return value;
   if (typeof value === "string") {
     try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
@@ -46,22 +46,31 @@ export default function StoryHub() {
     enabled: Boolean(story?.id),
   });
 
-  const { data: loreEntries = [], isLoading: loadingLore, error: loreError } = useQuery({
+  const { data: loreEntries = [], isLoading: loadingLore } = useQuery({
     queryKey: ["story-lore", storyCode, story?.id],
     queryFn: async () => {
       if (!story?.id) return [];
-      const { data, error } = await supabase
-        .from("story_lore_entries")
-        .select("id, story_id, category, title, content, sort_order, published")
-        .eq("story_id", story.id)
-        .eq("published", true)
-        .order("category", { ascending: true })
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return Array.isArray(data) ? data : [];
+      const isFb1 = story.story_code === "FB1";
+
+      try {
+        const { data, error } = await supabase
+          .from("story_lore_entries")
+          .select("id, story_id, category, title, content, published")
+          .eq("story_id", story.id)
+          .eq("published", true)
+          .order("category", { ascending: true });
+
+        if (error) throw error;
+
+        const entries = Array.isArray(data) ? data : [];
+        return entries.length ? entries : (isFb1 ? [FB1_LORE_FALLBACK] : []);
+      } catch (error) {
+        console.error("Failed to load lore entries", error);
+        return isFb1 ? [FB1_LORE_FALLBACK] : [];
+      }
     },
     enabled: Boolean(story?.id),
-    retry: 2,
+    retry: 1,
   });
 
   const hasLore = story?.story_code === "FB1" || loreEntries.length > 0;
