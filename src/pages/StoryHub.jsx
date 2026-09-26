@@ -64,7 +64,7 @@ export default function StoryHub() {
     retry: 2,
   });
 
-  const hasLore = loreEntries.length > 0;
+  const hasLore = story?.story_code === "FB1" || loreEntries.length > 0;
 
   if (loadingStory) return <div className="flex justify-center items-center min-h-[60vh]"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   if (storyError || !story) return <div className="max-w-3xl mx-auto px-6 py-20 text-center"><p className="text-muted-foreground text-lg">Story not found in this corner of the cosmos.</p><Link to="/stories" className="text-accent hover:underline mt-4 inline-block text-sm">← Back to catalogue</Link></div>;
