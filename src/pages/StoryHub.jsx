@@ -12,7 +12,16 @@ import StoryLore from "@/components/storyhub/StoryLore";
 import { getStatusInfo } from "@/lib/storyStatus";
 import SEO from "@/components/SEO";
 
-const FB1_LORE_FALLBACK = {\n  id: "fb1-glossary",\n  story_id: 1,\n  category: "Glossary",\n  title: "Frost & Bloom Glossary",\n  content: "https://tajelliebby.github.io/x7f9-story-assets/FB1/Glossary.html",\n  published: true,\n};\n\nconst asArray = (value) => {
+const FB1_LORE_FALLBACK = {
+  id: "fb1-glossary",
+  story_id: 1,
+  category: "Glossary",
+  title: "Frost & Bloom Glossary",
+  content: "https://tajelliebby.github.io/x7f9-story-assets/FB1/Glossary.html",
+  published: true,
+};
+
+const asArray = (value) => {
   if (Array.isArray(value)) return value;
   if (typeof value === "string") {
     try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
