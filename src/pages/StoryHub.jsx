@@ -105,7 +105,7 @@ export default function StoryHub() {
               <TabsTrigger value="comments" className="gap-1.5 data-[state=active]:bg-primary/20 data-[state=active]:text-primary"><MessageCircle className="w-3.5 h-3.5" />Comments</TabsTrigger>
             </TabsList>
             <TabsContent value="chapters">{loadingChapters ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : chaptersError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the chapters right now. Please refresh and try again.</div> : <ChapterList chapters={chapters} storyCode={story.story_code} />}</TabsContent>
-            {hasLore && <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : loreError ? <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5 text-sm text-destructive">We couldn't load the lore right now. Please refresh and try again.</div> : <StoryLore entries={loreEntries} />}</TabsContent>}
+            {hasLore && <TabsContent value="lore">{loadingLore ? <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div> : <StoryLore entries={loreEntries} />}</TabsContent>}
             <TabsContent value="comments"><StoryCommentBox storyId={story.id} /></TabsContent>
           </Tabs>
         </div>
