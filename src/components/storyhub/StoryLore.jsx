@@ -59,7 +59,7 @@ function prepareRemoteLoreDocument(source, sourceUrl) {
   document.querySelectorAll("style").forEach((style) => {
     style.textContent = style.textContent
       .replace(/@import\\s+[^;]+;?/gi, "")
-      .replace(/expression\\s*\\(/gi, "")
+      .replace(/expression\s*\(/gi, "")
       .replace(/javascript\\s*:/gi, "");
   });
 
